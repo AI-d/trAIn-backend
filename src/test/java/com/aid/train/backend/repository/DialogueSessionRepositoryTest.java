@@ -5,10 +5,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * @since 2025-10-08
  */
 @DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ActiveProfiles("test")
 class DialogueSessionRepositoryTest {
 
     @Autowired
@@ -40,6 +44,7 @@ class DialogueSessionRepositoryTest {
         // 테스트용 User 생성
         testUser = User.builder()
                 .email("test@example.com")
+                .password("testPassword123") // LOCAL 계정에 필수 비밀번호 추가
                 .name("테스트 사용자")
                 .primaryProvider(Provider.LOCAL)
                 .emailVerified(true)
@@ -54,6 +59,7 @@ class DialogueSessionRepositoryTest {
                 .prompt("안녕하세요. 테스트 시나리오입니다.")
                 .voice(Scenario.Voice.ONYX)
                 .difficulty(Scenario.Difficulty.EASY)
+                .category(Scenario.Category.WORK)
                 .build();
         entityManager.persistAndFlush(testScenario);
 
@@ -188,6 +194,7 @@ class DialogueSessionRepositoryTest {
                 .prompt("다른 프롬프트")
                 .voice(Scenario.Voice.ECHO)
                 .difficulty(Scenario.Difficulty.MEDIUM)
+                .category(Scenario.Category.RELATIONSHIP)
                 .build();
         entityManager.persistAndFlush(anotherScenario);
 

@@ -5,8 +5,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * @since 2025-10-08
  */
 @DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ActiveProfiles("test")
 class TranscriptRepositoryTest {
 
     @Autowired
@@ -50,6 +54,9 @@ class TranscriptRepositoryTest {
                 .title("테스트 시나리오")
                 .description("테스트용 시나리오입니다")
                 .prompt("테스트 프롬프트")
+                .voice(Scenario.Voice.ONYX)
+                .difficulty(Scenario.Difficulty.EASY)
+                .category(Scenario.Category.WORK)
                 .build();
         entityManager.persistAndFlush(testScenario);
 
