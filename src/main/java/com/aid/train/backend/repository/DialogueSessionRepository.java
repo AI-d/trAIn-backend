@@ -139,9 +139,10 @@ public interface DialogueSessionRepository extends JpaRepository<DialogueSession
      *
      * @return 평균 소요 시간 (초), 데이터가 없으면 null
      */
-    @Query("SELECT AVG(FUNCTION('TIMESTAMPDIFF', 'SECOND', s.startedAt, s.endedAt)) " +
-            "FROM DialogueSession s " +
-            "WHERE s.status = 'COMPLETED' AND s.endedAt IS NOT NULL")
+    @Query(value = "SELECT AVG(TIMESTAMPDIFF(SECOND, started_at, ended_at)) " +
+            "FROM dialogue_session " +
+            "WHERE status = 'COMPLETED' AND ended_at IS NOT NULL",
+            nativeQuery = true)
     Double findAverageSessionDuration();
 
     /**
@@ -150,10 +151,11 @@ public interface DialogueSessionRepository extends JpaRepository<DialogueSession
      * @param userId 사용자 ID
      * @return 평균 소요 시간 (초), 데이터가 없으면 null
      */
-    @Query("SELECT AVG(FUNCTION('TIMESTAMPDIFF', 'SECOND', s.startedAt, s.endedAt)) " +
-            "FROM DialogueSession s " +
-            "WHERE s.user.id = :userId " +
-            "AND s.status = 'COMPLETED' AND s.endedAt IS NOT NULL")
+    @Query(value = "SELECT AVG(TIMESTAMPDIFF(SECOND, started_at, ended_at)) " +
+            "FROM dialogue_session " +
+            "WHERE user_id = :userId " +
+            "AND status = 'COMPLETED' AND ended_at IS NOT NULL",
+            nativeQuery = true)
     Double findAverageSessionDurationByUserId(@Param("userId") Long userId);
 
     /**
