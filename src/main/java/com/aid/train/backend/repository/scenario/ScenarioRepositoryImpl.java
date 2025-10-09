@@ -17,7 +17,7 @@ public class ScenarioRepositoryImpl implements ScenarioCustom{
     // queryDsl 을 사용하기 위한 의존객체
     private final JPAQueryFactory factory;
 
-    // 1. 기본 시나리오 조회
+    // 1. 기본 시나리오
     // 1-1. id로 시나리오 조회
     @Override
     public Scenario findScenarioByScenarioId(Long id) {
@@ -36,5 +36,6 @@ public class ScenarioRepositoryImpl implements ScenarioCustom{
                 .fetch();
     }
 
-    // 2. 사용자 시나리오 조회
+    // 2. 사용자 시나리오
+    // 2-1. 사용자 시나리오 저장
 }

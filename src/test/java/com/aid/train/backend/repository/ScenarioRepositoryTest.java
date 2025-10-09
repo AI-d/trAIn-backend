@@ -1,5 +1,6 @@
 package com.aid.train.backend.repository;
 
+import com.aid.train.backend.dto.scenario.request.ScenarioRequestDto;
 import com.aid.train.backend.entity.scenario.Scenario;
 import com.aid.train.backend.repository.scenario.ScenarioRepository;
 import jakarta.persistence.EntityManager;
@@ -30,7 +31,7 @@ class ScenarioRepositoryTest {
 
     // 기본 시나리오 db 저장
     @BeforeEach
-    void insert() {
+    /*void insert() {
         Scenario s1 = Scenario.builder()
                 .title("상사에게 일정 지연 보고")
                 .description("프로젝트 일정이 3일 지연된 상황에서 상사에게 간결하고 명확하게 보고하고 대안을 제시하는 연습")
@@ -90,7 +91,7 @@ class ScenarioRepositoryTest {
         scenarioRepository.saveAll(List.of(s1, s2, s3, s4));
         em.flush();
         em.clear();
-    }
+    }*/
 
     /*@Test
     @DisplayName("id로 시나리오를 조회합니다.")
@@ -111,5 +112,27 @@ class ScenarioRepositoryTest {
         List<Scenario> scenarioList = scenarioRepository.findAllScenario();
         // then
         System.out.println("scenario = " + scenarioList);
+    }
+
+    @Test
+    @DisplayName("사용자가 생성한 시나리오를 db에 저장합니다.")
+    void createScenario() {
+        // given
+        ScenarioRequestDto dto = ScenarioRequestDto.builder()
+                .title("사용자 생성 시나리오 테스트 제목")
+                .description("사용자 생성 시나리오 저장을 위한 테스트입니다.")
+                .prompt("사용자 생성 시나리오 저장을 위한 테스트로 질문은 하지 말아주세요.")
+                .voice(NOVA)
+                .difficulty(EASY)
+                .category(WORK)
+                .locale("ko-KR")
+                .build();
+
+        Scenario entity = Scenario.toEntity(dto);
+        Scenario.Status status = entity.getStatus();
+        // when
+        Scenario saved = scenarioRepository.save(entity);
+        // then
+        System.out.println("saved = " + saved + "저장되었습니다.");
     }
 }
