@@ -1,10 +1,7 @@
-package com.aid.train.backend.entity;
+package com.aid.train.backend.entity.scenario;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -14,6 +11,7 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString()
 public class Scenario
 {
     @Id
@@ -49,6 +47,12 @@ public class Scenario
     @Column(nullable = false, length = 16)
     @Builder.Default
     private Status status = Status.PUBLISHED;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean isDefault = true;
+
+    // 유저, 대화세션 엔터티 연결 후 재 테스트 필요
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
