@@ -38,6 +38,12 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
+    // WebSocket 의존성 추가
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // JSON 처리를 위한 Jackson 라이브러리 추가
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
     // Development Tools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
