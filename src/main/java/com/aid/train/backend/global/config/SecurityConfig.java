@@ -19,6 +19,7 @@ public class SecurityConfig {
 
                 // 요청 권한 설정
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/api/health").permitAll() // 임시: 2025.10.10 배포 테스트용, 추후 삭제 예정
                         .requestMatchers("/ws/**").permitAll()          // WebSocket 전체 허용
                         .requestMatchers("/api/auth/**").permitAll()    // 인증 API 허용
                         .anyRequest().authenticated()                   // 나머지는 인증 필요
