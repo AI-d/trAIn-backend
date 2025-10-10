@@ -1,7 +1,15 @@
 package com.aid.train.backend.repository;
 
-import com.aid.train.backend.entity.*;
-import com.aid.train.backend.repository.dialogueSession.DialogueSessionRepository;
+import com.aid.train.backend.domain.scenario.entity.Scenario;
+import com.aid.train.backend.domain.session.entity.DialogueSession;
+import com.aid.train.backend.domain.user.entity.User;
+import com.aid.train.backend.domain.user.enums.Provider;
+import com.aid.train.backend.domain.session.enums.SessionStatus;
+import com.aid.train.backend.domain.user.enums.UserStatus;
+import com.aid.train.backend.repository.scenario.ScenarioRepository;
+import com.aid.train.backend.repository.session.DialogueSessionRepository;
+import com.aid.train.backend.repository.user.UserRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -9,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
@@ -25,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author 김경민
  * @since 2025-10-08
  */
-@DataJpaTest
+@SpringBootTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 class DialogueSessionRepositoryTest {
@@ -34,7 +43,13 @@ class DialogueSessionRepositoryTest {
     private DialogueSessionRepository dialogueSessionRepository;
 
     @Autowired
-    private TestEntityManager entityManager;
+    private UserRepository userRepository;
+
+    @Autowired
+    private ScenarioRepository scenarioRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     private User testUser;
     private Scenario testScenario;
@@ -51,7 +66,8 @@ class DialogueSessionRepositoryTest {
                 .emailVerified(true)
                 .status(UserStatus.ACTIVE)
                 .build();
-        entityManager.persistAndFlush(testUser);
+        // entityManager.persistAndFlush(testUser);
+        userRepository.save(testUser);
 
         // 테스트용 Scenario 생성
         testScenario = Scenario.builder()
@@ -62,7 +78,9 @@ class DialogueSessionRepositoryTest {
                 .difficulty(Scenario.Difficulty.EASY)
                 .category(Scenario.Category.WORK)
                 .build();
-        entityManager.persistAndFlush(testScenario);
+        // entityManager.persistAndFlush(testScenario);
+        scenarioRepository.save(testScenario);
+
 
         // 테스트용 DialogueSession 생성
         testSession = DialogueSession.builder()
@@ -71,7 +89,8 @@ class DialogueSessionRepositoryTest {
                 .status(SessionStatus.ONGOING)
                 .startedAt(LocalDateTime.now().minusMinutes(10))
                 .build();
-        entityManager.persistAndFlush(testSession);
+        // entityManager.persistAndFlush(testSession);
+        dialogueSessionRepository.save(testSession);
     }
 
     @Test
@@ -107,7 +126,8 @@ class DialogueSessionRepositoryTest {
                 .status(SessionStatus.COMPLETED)
                 .startedAt(LocalDateTime.now().minusHours(1))
                 .build();
-        entityManager.persistAndFlush(olderSession);
+        //entityManager.persistAndFlush(olderSession);
+        dialogueSessionRepository.save(olderSession);
 
         DialogueSession newerSession = DialogueSession.builder()
                 .user(testUser)
@@ -115,7 +135,8 @@ class DialogueSessionRepositoryTest {
                 .status(SessionStatus.ONGOING)
                 .startedAt(LocalDateTime.now().minusMinutes(5))
                 .build();
-        entityManager.persistAndFlush(newerSession);
+       // entityManager.persistAndFlush(newerSession);
+        dialogueSessionRepository.save(newerSession);
 
         // when
         List<DialogueSession> sessions = dialogueSessionRepository.findByUserIdOrderByStartedAtDesc(testUser.getId());
@@ -138,7 +159,8 @@ class DialogueSessionRepositoryTest {
                     .status(SessionStatus.COMPLETED)
                     .startedAt(LocalDateTime.now().minusMinutes(i))
                     .build();
-            entityManager.persistAndFlush(session);
+            // entityManager.persistAndFlush(session);
+            dialogueSessionRepository.save(session);
         }
 
         // when
@@ -161,7 +183,8 @@ class DialogueSessionRepositoryTest {
                 .status(SessionStatus.COMPLETED)
                 .startedAt(LocalDateTime.now().minusMinutes(20))
                 .build();
-        entityManager.persistAndFlush(completedSession);
+        // entityManager.persistAndFlush(completedSession);
+        dialogueSessionRepository.save(completedSession);
 
         DialogueSession failedSession = DialogueSession.builder()
                 .user(testUser)
@@ -169,7 +192,8 @@ class DialogueSessionRepositoryTest {
                 .status(SessionStatus.FAILED)
                 .startedAt(LocalDateTime.now().minusMinutes(30))
                 .build();
-        entityManager.persistAndFlush(failedSession);
+        // entityManager.persistAndFlush(failedSession);
+        dialogueSessionRepository.save(failedSession);
 
         // when
         List<DialogueSession> inProgressSessions = dialogueSessionRepository
@@ -197,7 +221,8 @@ class DialogueSessionRepositoryTest {
                 .difficulty(Scenario.Difficulty.MEDIUM)
                 .category(Scenario.Category.RELATIONSHIP)
                 .build();
-        entityManager.persistAndFlush(anotherScenario);
+        // entityManager.persistAndFlush(anotherScenario);
+        scenarioRepository.save(anotherScenario);
 
         DialogueSession sessionWithAnotherScenario = DialogueSession.builder()
                 .user(testUser)
@@ -205,7 +230,8 @@ class DialogueSessionRepositoryTest {
                 .status(SessionStatus.ONGOING)
                 .startedAt(LocalDateTime.now())
                 .build();
-        entityManager.persistAndFlush(sessionWithAnotherScenario);
+        // entityManager.persistAndFlush(sessionWithAnotherScenario);
+        dialogueSessionRepository.save(sessionWithAnotherScenario);
 
         // when
         List<DialogueSession> sessionsForTestScenario = dialogueSessionRepository
@@ -234,7 +260,8 @@ class DialogueSessionRepositoryTest {
                 .status(SessionStatus.COMPLETED)
                 .startedAt(LocalDateTime.now().minusHours(1))
                 .build();
-        entityManager.persistAndFlush(sessionInRange);
+        // entityManager.persistAndFlush(sessionInRange);
+        dialogueSessionRepository.save(sessionInRange);
 
         // 기간 밖 완료된 세션
         DialogueSession sessionOutOfRange = DialogueSession.builder()
@@ -243,7 +270,8 @@ class DialogueSessionRepositoryTest {
                 .status(SessionStatus.COMPLETED)
                 .startedAt(LocalDateTime.now().minusMinutes(5))
                 .build();
-        entityManager.persistAndFlush(sessionOutOfRange);
+        //entityManager.persistAndFlush(sessionOutOfRange);
+        dialogueSessionRepository.save(sessionOutOfRange);
 
         // when
         List<DialogueSession> sessionsInRange = dialogueSessionRepository
@@ -265,7 +293,8 @@ class DialogueSessionRepositoryTest {
                     .status(SessionStatus.COMPLETED)
                     .startedAt(LocalDateTime.now().minusMinutes(i))
                     .build();
-            entityManager.persistAndFlush(session);
+            // entityManager.persistAndFlush(session);
+            dialogueSessionRepository.save(session);
         }
 
         // when
@@ -301,7 +330,8 @@ class DialogueSessionRepositoryTest {
 
         // when
         testSession.complete();
-        entityManager.persistAndFlush(testSession);
+        // entityManager.persistAndFlush(testSession);
+        dialogueSessionRepository.save(testSession);
 
         // then
         assertEquals(SessionStatus.COMPLETED, testSession.getStatus());
@@ -317,7 +347,8 @@ class DialogueSessionRepositoryTest {
 
         // when
         testSession.fail();
-        entityManager.persistAndFlush(testSession);
+        // entityManager.persistAndFlush(testSession);
+        dialogueSessionRepository.save(testSession);
 
         // then
         assertEquals(SessionStatus.FAILED, testSession.getStatus());
@@ -330,7 +361,8 @@ class DialogueSessionRepositoryTest {
         // given
         Long janusRoomId = 12345L;
         testSession.setJanusInfo(janusRoomId, 1001L, 1002L);
-        entityManager.persistAndFlush(testSession);
+        // entityManager.persistAndFlush(testSession);
+        dialogueSessionRepository.save(testSession);
 
         // when
         Optional<DialogueSession> found = dialogueSessionRepository.findByJanusRoomId(janusRoomId);
@@ -346,7 +378,8 @@ class DialogueSessionRepositoryTest {
         // given
         String aiSessionId = "ai-session-12345";
         testSession.setAiRealtimeSessionId(aiSessionId);
-        entityManager.persistAndFlush(testSession);
+        // entityManager.persistAndFlush(testSession);
+        dialogueSessionRepository.save(testSession);
 
         // when
         Optional<DialogueSession> found = dialogueSessionRepository.findByAiRealtimeSessionId(aiSessionId);

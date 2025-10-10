@@ -1,14 +1,13 @@
 package com.aid.train.backend.repository.scenario;
 
-import com.aid.train.backend.entity.scenario.QScenario;
-import com.aid.train.backend.entity.scenario.Scenario;
+import com.aid.train.backend.domain.scenario.entity.Scenario;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
-import static com.aid.train.backend.entity.scenario.QScenario.scenario;
-import static com.aid.train.backend.entity.scenario.Scenario.Status.PUBLISHED;
+import static com.aid.train.backend.domain.scenario.entity.QScenario.scenario;
+import static com.aid.train.backend.domain.scenario.entity.Scenario.Status.*;
 
 @RequiredArgsConstructor
 public class ScenarioRepositoryImpl implements ScenarioCustom{

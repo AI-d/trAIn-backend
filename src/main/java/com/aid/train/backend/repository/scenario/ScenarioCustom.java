@@ -1,6 +1,6 @@
 package com.aid.train.backend.repository.scenario;
 
-import com.aid.train.backend.entity.scenario.Scenario;
+import com.aid.train.backend.domain.scenario.entity.Scenario;
 
 import java.util.List;
 

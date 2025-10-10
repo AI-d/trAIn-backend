@@ -1,8 +1,10 @@
 package com.aid.train.backend.controller.scenario;
 
-import com.aid.train.backend.dto.scenario.request.ScenarioRequestDto;
-import com.aid.train.backend.entity.scenario.Scenario;
+import com.aid.train.backend.domain.scenario.dto.request.ScenarioRequestDto;
+import com.aid.train.backend.domain.scenario.entity.Scenario;
+import com.aid.train.backend.domain.user.entity.User;
 import com.aid.train.backend.repository.scenario.ScenarioRepository;
+import com.aid.train.backend.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,7 @@ import java.util.List;
 public class ScenarioController {
 
     private final ScenarioRepository scenarioRepository;
+    private final UserRepository userRepository;
 
     @GetMapping("/{id}")
     public ResponseEntity<?> findScenario(@PathVariable Long id) {
@@ -32,8 +35,10 @@ public class ScenarioController {
 
     @PutMapping
     public ResponseEntity<?> createNewScenario(@RequestBody ScenarioRequestDto dto) {
-        Scenario entity = Scenario.toEntity(dto);
+        User user = userRepository.findById(dto.ownerId()).orElseThrow();
+        Scenario entity = Scenario.toEntity(dto,user);
         Scenario saved = scenarioRepository.save(entity);
         return ResponseEntity.ok().body(saved);
     }
+
 }

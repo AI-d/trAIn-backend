@@ -1,8 +1,12 @@
 package com.aid.train.backend.repository;
 
-import com.aid.train.backend.dto.scenario.request.ScenarioRequestDto;
-import com.aid.train.backend.entity.scenario.Scenario;
+import com.aid.train.backend.domain.scenario.dto.request.ScenarioRequestDto;
+import com.aid.train.backend.domain.scenario.entity.Scenario;
+import com.aid.train.backend.domain.user.entity.User;
+import com.aid.train.backend.domain.user.enums.Provider;
+import com.aid.train.backend.domain.user.enums.UserStatus;
 import com.aid.train.backend.repository.scenario.ScenarioRepository;
+import com.aid.train.backend.repository.user.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,10 +19,10 @@ import org.springframework.test.annotation.Rollback;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static com.aid.train.backend.entity.scenario.Scenario.Category.*;
-import static com.aid.train.backend.entity.scenario.Scenario.Difficulty.*;
-import static com.aid.train.backend.entity.scenario.Scenario.Status.PUBLISHED;
-import static com.aid.train.backend.entity.scenario.Scenario.Voice.*;
+import static com.aid.train.backend.domain.scenario.entity.Scenario.Category.*;
+import static com.aid.train.backend.domain.scenario.entity.Scenario.Difficulty.*;
+import static com.aid.train.backend.domain.scenario.entity.Scenario.Status.PUBLISHED;
+import static com.aid.train.backend.domain.scenario.entity.Scenario.Voice.*;
 
 @SpringBootTest
 @Transactional
@@ -29,11 +33,25 @@ class ScenarioRepositoryTest {
     private ScenarioRepository scenarioRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     EntityManager em;
 
     // 기본 시나리오 db 저장
     @BeforeEach
     void insert() {
+        User testUser = User.builder()
+                .email("test@example.com")
+                .password("testPassword123") // LOCAL 계정에 필수 비밀번호 추가
+                .name("테스트 사용자")
+                .primaryProvider(Provider.LOCAL)
+                .emailVerified(true)
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        userRepository.save(testUser);
+
         Scenario s1 = Scenario.builder()
                 .title("상사에게 일정 지연 보고")
                 .description("프로젝트 일정이 3일 지연된 상황에서 상사에게 간결하고 명확하게 보고하고 대안을 제시하는 연습")
@@ -130,7 +148,9 @@ class ScenarioRepositoryTest {
                 .locale("ko-KR")
                 .build();
 
-        Scenario entity = Scenario.toEntity(dto);
+        User user = userRepository.findById(1L).orElseThrow();
+
+        Scenario entity = Scenario.toEntity(dto, user);
         Scenario.Status status = entity.getStatus();
         // when
         Scenario saved = scenarioRepository.save(entity);
