@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Rollback;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,7 +21,8 @@ import static com.aid.train.backend.entity.scenario.Scenario.Status.PUBLISHED;
 import static com.aid.train.backend.entity.scenario.Scenario.Voice.*;
 
 @SpringBootTest
-@Transactional()
+@Transactional
+@Rollback(value = false)
 class ScenarioRepositoryTest {
 
     @Autowired
