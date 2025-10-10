@@ -22,6 +22,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()          // WebSocket 전체 허용
                         .requestMatchers("/api/**").permitAll()    // 인증 API 허용
                         .anyRequest().authenticated()                   // 나머지는 인증 필요
+
                 );
 
         return http.build();
