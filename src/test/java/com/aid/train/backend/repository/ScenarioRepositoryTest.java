@@ -31,7 +31,7 @@ class ScenarioRepositoryTest {
 
     // 기본 시나리오 db 저장
     @BeforeEach
-    /*void insert() {
+    void insert() {
         Scenario s1 = Scenario.builder()
                 .title("상사에게 일정 지연 보고")
                 .description("프로젝트 일정이 3일 지연된 상황에서 상사에게 간결하고 명확하게 보고하고 대안을 제시하는 연습")
@@ -91,9 +91,9 @@ class ScenarioRepositoryTest {
         scenarioRepository.saveAll(List.of(s1, s2, s3, s4));
         em.flush();
         em.clear();
-    }*/
+    }
 
-    /*@Test
+    @Test
     @DisplayName("id로 시나리오를 조회합니다.")
     void findOneScenario() {
         // given
@@ -102,7 +102,7 @@ class ScenarioRepositoryTest {
         Scenario scenario = scenarioRepository.findScenarioByScenarioId(id);
         // then
         System.out.println("scenario = " + scenario);
-    }*/
+    }
 
     @Test
     @DisplayName("db에 저장된 모든 시나리오를 조회합니다.")
