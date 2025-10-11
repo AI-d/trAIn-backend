@@ -1,6 +1,14 @@
 package com.aid.train.backend.repository;
 
-import com.aid.train.backend.entity.*;
+import com.aid.train.backend.domain.scenario.entity.Scenario;
+import com.aid.train.backend.domain.session.entity.DialogueSession;
+import com.aid.train.backend.domain.session.entity.Transcript;
+import com.aid.train.backend.domain.user.entity.User;
+import com.aid.train.backend.domain.user.enums.Provider;
+import com.aid.train.backend.domain.session.enums.SessionStatus;
+import com.aid.train.backend.domain.session.enums.Speaker;
+import com.aid.train.backend.domain.user.enums.UserStatus;
+import com.aid.train.backend.repository.session.TranscriptRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,7 +20,6 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
