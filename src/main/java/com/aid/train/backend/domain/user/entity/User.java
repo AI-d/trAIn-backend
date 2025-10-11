@@ -4,6 +4,7 @@ import com.aid.train.backend.domain.scenario.entity.Scenario;
 import com.aid.train.backend.domain.user.enums.Provider;
 import com.aid.train.backend.domain.terms.entity.UserConsent;
 import com.aid.train.backend.domain.user.enums.UserStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -60,14 +61,17 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<SocialAccount> socialAccounts = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     @Builder.Default
+    @JsonIgnore
     private List<UserConsent> consents = new ArrayList<>();
 
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<Scenario> scenarios = new ArrayList<>();
 
     @CreatedDate

@@ -3,6 +3,7 @@ package com.aid.train.backend.domain.scenario.entity;
 import com.aid.train.backend.domain.scenario.dto.request.ScenarioRequestDto;
 import com.aid.train.backend.domain.session.entity.DialogueSession;
 import com.aid.train.backend.domain.user.entity.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -68,6 +69,7 @@ public class Scenario
 
     @OneToMany(mappedBy = "scenario", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
+    @JsonIgnore
     private List<DialogueSession> sessions = new ArrayList<>();
 
     @CreationTimestamp
