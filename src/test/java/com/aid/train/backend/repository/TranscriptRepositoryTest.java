@@ -8,7 +8,7 @@ import com.aid.train.backend.domain.user.enums.Provider;
 import com.aid.train.backend.domain.session.enums.SessionStatus;
 import com.aid.train.backend.domain.session.enums.Speaker;
 import com.aid.train.backend.domain.user.enums.UserStatus;
-import com.aid.train.backend.repository.session.TranscriptRepository;
+import com.aid.train.backend.domain.session.repository.TranscriptRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

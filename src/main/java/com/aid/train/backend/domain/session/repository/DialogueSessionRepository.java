@@ -1,4 +1,4 @@
-package com.aid.train.backend.repository.session;
+package com.aid.train.backend.domain.session.repository;
 
 import com.aid.train.backend.domain.session.entity.DialogueSession;
 import com.aid.train.backend.domain.session.enums.SessionStatus;

@@ -1,4 +1,4 @@
-package com.aid.train.backend.global.common.response;
+package com.aid.train.backend.global.response;
 
 /**
  * 클라이언트에게 일관적인 응답 포맷을 제공하기 위한 객체입니다.
