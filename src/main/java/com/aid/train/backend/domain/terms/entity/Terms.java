@@ -147,4 +147,26 @@ public class Terms {
         this.title = title;
         this.content = content;
     }
+
+    /**
+     * 약관 엔티티를 생성하는 정적 팩토리 메서드입니다.
+     * 초기 데이터 생성 및 새 약관 버전 등록 시 사용합니다.
+     *
+     * @param type    약관 타입
+     * @param title   약관 제목
+     * @param content 약관 내용
+     * @param version 약관 버전
+     * @return 생성된 Terms 엔티티
+     */
+    public static Terms createTerms(TermsType type, String title, String content, String version) {
+        return Terms.builder()
+                .type(type)
+                .title(title)
+                .content(content)
+                .version(version)
+                .isRequired(type != TermsType.MARKETING_CONSENT) // 마케팅 동의는 선택, 나머지는 필수
+                .effectiveDate(LocalDateTime.now())
+                .isActive(true)
+                .build();
+    }
 }

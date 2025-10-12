@@ -190,6 +190,15 @@ public class User {
     }
 
     /**
+     * 휴면 계정으로 전환합니다.
+     * 1년 이상 미접속 계정을 INACTIVE 상태로 변경합니다.
+     * DataCleanupScheduler에서 호출됩니다.
+     */
+    public void convertToInactive() {
+        this.status = UserStatus.INACTIVE;
+    }
+
+    /**
      * LOCAL 계정 여부를 확인합니다.
      *
      * @return LOCAL 계정이면 true, 아니면 false
