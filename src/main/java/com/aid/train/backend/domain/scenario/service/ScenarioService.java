@@ -1,17 +1,18 @@
 package com.aid.train.backend.domain.scenario.service;
 
 import com.aid.train.backend.domain.scenario.dto.request.ScenarioRequestDto;
+import com.aid.train.backend.domain.scenario.dto.response.ScenarioResponseDto;
 import com.aid.train.backend.domain.scenario.entity.Scenario;
 import com.aid.train.backend.domain.scenario.repository.ScenarioRepository;
 import com.aid.train.backend.domain.user.entity.User;
 import com.aid.train.backend.domain.user.repository.UserRepository;
 import com.aid.train.backend.global.exception.TrainException;
-import com.aid.train.backend.global.exception.enums.ErrorCode;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.aid.train.backend.global.exception.enums.ErrorCode.SCENARIO_NOT_FOUND;
 import static com.aid.train.backend.global.exception.enums.ErrorCode.USER_NOT_FOUND;
@@ -28,35 +29,41 @@ public class ScenarioService {
      * DB에 저장된 모든 시나리오를 조회합니다.
      */
     @Transactional(readOnly = true)
-    public List<Scenario> findAllScenarios() {
+    public List<ScenarioResponseDto> findAllScenarios() {
         List<Scenario> scenarios = scenarioRepository.findAll();
         if(scenarios.isEmpty()) {
             throw new TrainException(SCENARIO_NOT_FOUND);
         }
-        return scenarios;
+        List<ScenarioResponseDto> scenarioList = scenarios.stream()
+                .map(scenario -> ScenarioResponseDto.fromEntity(scenario))
+                .collect(Collectors.toList());
+        return scenarioList;
     }
     /**
      * 애플리케이션에서 제공하는 기본 시나리오를 조회합니다.
      */
     @Transactional(readOnly = true)
-    public List<Scenario> findDefaultScenarios() {
+    public List<ScenarioResponseDto> findDefaultScenarios() {
         List<Scenario> defaultScenarios = scenarioRepository.findDefaultAll();
         if(defaultScenarios.isEmpty()) {
             throw new TrainException(SCENARIO_NOT_FOUND);
         }
-        return defaultScenarios;
+        List<ScenarioResponseDto> defaultList = defaultScenarios.stream()
+                .map(scenario -> ScenarioResponseDto.fromEntity(scenario))
+                .collect(Collectors.toList());
+        return defaultList;
     }
 
     /**
      * id 별 단일 시나리오를 조회합니다.
      */
     @Transactional(readOnly = true)
-    public Scenario findOneScenario(Long id) {
+    public ScenarioResponseDto findOneScenario(Long id) {
         Scenario scenario = scenarioRepository.findById(id).orElseThrow(
                 () -> new TrainException(SCENARIO_NOT_FOUND)
         );
 
-        return scenario;
+        return ScenarioResponseDto.fromEntity(scenario);
     }
 
     /**
@@ -73,23 +80,26 @@ public class ScenarioService {
      * 사용자가 생성한 모든 시나리오를 조회합니다.
      */
     @Transactional(readOnly = true)
-    public List<Scenario> findAllScenarioMadeUser(Long id) {
+    public List<ScenarioResponseDto> findAllScenarioMadeUser(Long id) {
         List<Scenario> userScenarios = scenarioRepository.findAllByUserId(id);
         if(userScenarios.isEmpty()) {
             throw new TrainException(SCENARIO_NOT_FOUND);
         }
-        return userScenarios;
+        List<ScenarioResponseDto> scenarioList = userScenarios.stream()
+                .map(scenario -> ScenarioResponseDto.fromEntity(scenario))
+                .collect(Collectors.toList());
+        return scenarioList;
     }
 
     /**
      * 사용자가 생성한 단일 시나리오를 조회합니다.
      */
     @Transactional(readOnly = true)
-    public Scenario findOneScenarioByUser(Long userId, Long scenarioId) {
+    public ScenarioResponseDto findOneScenarioByUser(Long userId, Long scenarioId) {
         Scenario scenario = scenarioRepository.findByAndUserId(userId, scenarioId).orElseThrow(
                 () -> new TrainException(SCENARIO_NOT_FOUND)
         );
-        return scenario;
+        return ScenarioResponseDto.fromEntity(scenario);
     }
 
     /**

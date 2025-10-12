@@ -13,8 +13,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.aid.train.backend.domain.user.entity.QUser.user;
-
 @Table(name="Scenario")
 @Entity
 @Builder
