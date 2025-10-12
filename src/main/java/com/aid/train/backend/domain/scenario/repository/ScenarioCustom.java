@@ -1,4 +1,4 @@
-package com.aid.train.backend.repository.scenario;
+package com.aid.train.backend.domain.scenario.repository;
 
 import com.aid.train.backend.domain.scenario.entity.Scenario;
 

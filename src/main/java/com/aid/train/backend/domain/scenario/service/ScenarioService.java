@@ -1,4 +1,4 @@
-package com.aid.train.backend.service;
+package com.aid.train.backend.domain.scenario.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
