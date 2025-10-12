@@ -10,52 +10,141 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 /**
- * 약관 본문 엔티티
+ * 약관 본문 엔티티 클래스입니다.
+ * 서비스 이용약관, 개인정보 처리방침, 마케팅 수신 동의 등의 약관을 저장합니다.
+ *
+ * <p>
+ * 주요 기능:
+ * <ul>
+ *   <li>약관 유형별 관리 (필수/선택)</li>
+ *   <li>약관 버전 관리</li>
+ *   <li>약관 시행일 관리</li>
+ *   <li>활성/비활성 상태 관리</li>
+ * </ul>
+ * </p>
  *
  * @author 왕택준
- * @since 2025-10-08
+ * @since 1.0.0
  */
 @Entity
-@Table(name = "terms")
+@Table(
+        name = "terms",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_terms_type_version",
+                        columnNames = {"type", "version"}
+                )
+        },
+        indexes = {
+                @Index(
+                        name = "idx_terms_type_active",
+                        columnList = "type, is_active"
+                )
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
 public class Terms {
+
+    /**
+     * 약관 고유 ID (자동 생성)
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * 약관 종류 (TERMS_OF_SERVICE, PRIVACY_POLICY, MARKETING_CONSENT)
+     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private TermsType type;
 
+    /**
+     * 약관 버전 (예: 1.0, 1.1, 2.0)
+     */
     @Column(nullable = false, length = 20)
     private String version;
 
+    /**
+     * 약관 제목
+     */
     @Column(nullable = false, length = 200)
     private String title;
 
+    /**
+     * 약관 내용 (전문)
+     * Markdown 또는 HTML 형식으로 저장 가능
+     */
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    /**
+     * 필수 동의 여부
+     * true: 필수 약관 (동의하지 않으면 가입 불가)
+     * false: 선택 약관 (거부 가능)
+     */
     @Column(name = "is_required", nullable = false)
     @Builder.Default
     private Boolean isRequired = true;
 
+    /**
+     * 약관 시행일
+     * 이 날짜부터 약관이 효력을 발생함
+     */
     @Column(name = "effective_date", nullable = false)
     private LocalDateTime effectiveDate;
 
+    /**
+     * 약관 활성화 여부
+     * 최신 버전만 true로 설정
+     * 이전 버전은 false (참조용으로 보관)
+     */
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
 
+    /**
+     * 약관 생성 일시
+     */
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /**
+     * 약관 수정 일시
+     */
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    /**
+     * 약관을 비활성화합니다.
+     * 새 버전 약관 등록 시 이전 버전 비활성화에 사용
+     */
+    public void deactivate() {
+        this.isActive = false;
+    }
+
+    /**
+     * 약관을 활성화합니다.
+     */
+    public void activate() {
+        this.isActive = true;
+    }
+
+    /**
+     * 약관 내용을 업데이트합니다.
+     * 주의: 약관 변경 시 기존 약관은 비활성화하고 새 버전 생성 권장
+     *
+     * @param title   업데이트할 제목
+     * @param content 업데이트할 내용
+     */
+    public void updateContent(String title, String content) {
+        this.title = title;
+        this.content = content;
+    }
 }
