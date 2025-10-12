@@ -1,0 +1,19 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+logging:
+  level:
+    com.aid.train.backend: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+
+server:
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false

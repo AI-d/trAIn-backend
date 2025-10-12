@@ -4,7 +4,7 @@
 *.ctxt
 .mtj.tmp/
 
-# Package Files
+### Package Files ###
 *.jar
 *.war
 *.nar
@@ -13,21 +13,19 @@
 *.tar.gz
 *.rar
 
-# JVM crash logs
+### JVM crash logs ###
 hs_err_pid*
 replay_pid*
 
 ### Gradle ###
-.gradle
+.gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
-!gradlew
-!gradlew.bat
 !**/src/main/**/build/
 !**/src/test/**/build/
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -38,13 +36,9 @@ out/
 ### VS Code ###
 .vscode/
 
-### Spring ###
-HELP.md
-application.yml
+### 환경 변수 파일 (민감 정보) ###
 .env
 
-### OS Specific ###
-# macOS
+### OS ###
 .DS_Store
-# Windows
 Thumbs.db
