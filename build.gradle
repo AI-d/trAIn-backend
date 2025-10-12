@@ -22,52 +22,91 @@ configurations {
 
 repositories {
     mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
+    maven { url 'https://repo.spring.io/snapshot' }
+}
+
+ext {
+    springAiVersion = '1.0.0-M4'
 }
 
 dependencies {
-    // Spring Boot 핵심 스타터
-    implementation 'org.springframework.boot:spring-boot-starter-web' // 웹 애플리케이션 개발
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // JPA 기반 데이터베이스 접근
-    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc' // JDBC 기반 데이터베이스 접근
-    implementation 'org.springframework.boot:spring-boot-starter-validation' // Bean Validation 검증
-
+    // ===== Core Spring Boot Starters =====
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
-    // .env 파일 지원 추가
+    // ===== AI Integration =====
+    // Spring AI OpenAI (Swagger 의존성 제외)
+    implementation("org.springframework.ai:spring-ai-openai-spring-boot-starter:${springAiVersion}") {
+        exclude group: 'io.swagger.core.v3', module: 'swagger-annotations'
+    }
+
+    // ===== Authentication & Authorization =====
+    // JWT
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+
+    // OAuth2
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    // ===== Communication =====
+    // Mail
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // ===== Cache & Performance =====
+    // Cache
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+
+    // Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // ===== Monitoring & Operations =====
+    // Actuator
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // ===== Documentation =====
+    // SpringDoc (Swagger UI)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
+
+    // ===== Configuration =====
+    // Dotenv
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 
+    // ===== Code Generation =====
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-
-    // WebSocket
-    implementation 'org.springframework.boot:spring-boot-starter-websocket' // 실시간 양방향 통신'
-
-    // JSON 처리를 위한 Jackson 라이브러리 추가
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
-
-    // Development Tools
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
-    // Database Drivers
-    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client:3.1.4'
+    // ===== Database =====
+    // MariaDB Driver
+    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 
-    // Test Dependencies
+    // QueryDSL
+    implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
+    annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api:3.1.0'
+
+    // p6spy (쿼리 로깅)
+    implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.1'
+
+    // ===== JSON Processing =====
+    // Jackson (spring-boot-starter-web에 포함되어 있지만 명시적 추가)
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    // ===== Development Tools =====
+    // Devtools
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // ===== Test =====
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-    // QueryDSL (타입 안전 쿼리)
-    implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta' // QueryDSL JPA 지원
-    annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta' // QueryDSL 코드 생성
-    annotationProcessor 'jakarta.persistence:jakarta.persistence-api:3.1.0' // JPA 어노테이션 처리
-
-    // 쿼리 로깅
-    implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.1'
-
-    // 개발 도구
-    developmentOnly 'org.springframework.boot:spring-boot-devtools' // 자동 재시작, 라이브 리로드
 }
 
 tasks.named('test') {
