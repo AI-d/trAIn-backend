@@ -32,6 +32,14 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "서버 내부 오류가 발생했습니다.", 500),
     VALIDATION_ERROR("VALIDATION_ERROR", "유효성 검사에 실패했습니다.", 400),
 
+
+    // =========================
+    // 시나리오 관련
+    // =========================
+    SCENARIO_NOT_FOUND("SCENARIO_NOT_FOUND", "시나리오를 찾을 수 없습니다.", 404),
+    SCENARIO_ALREADY_DELETED("SCENARIO_ALREADY_DELETED", "이미 삭제된 시나리오입니다.", 409),
+    DEFAULT_SCENARIO_DELETE_FORBIDDEN("DEFAULT_SCENARIO_DELETE_FORBIDDEN", "기본 시나리오는 삭제할 수 없습니다.", 409),
+
     // 비즈니스 에러 코드
     BUSINESS_ERROR("BUSINESS_ERROR", "비즈니스 로직 오류가 발생했습니다.", 400),
     DUPLICATE_RESOURCE("DUPLICATE_RESOURCE", "이미 존재하는 리소스입니다.", 409),

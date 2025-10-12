@@ -22,7 +22,7 @@ import static com.aid.train.backend.domain.user.entity.QUser.user;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString()
+@ToString(exclude = {"owner", "sessions"})
 public class Scenario
 {
     @Id
@@ -83,7 +83,7 @@ public class Scenario
     public enum Voice { ONYX, ECHO, NOVA }
     public enum Difficulty { EASY, MEDIUM, HARD }
     public enum Category { WORK, RELATIONSHIP, FAMILY, FRIEND }
-    public enum Status { DRAFT, PUBLISHED }
+    public enum Status { DRAFT, PUBLISHED, DELETED }
 
     // dto -> entity 편의 메소드
     public static Scenario toEntity(ScenarioRequestDto dto, User user) {
