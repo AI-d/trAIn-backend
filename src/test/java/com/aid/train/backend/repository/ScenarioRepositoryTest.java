@@ -7,6 +7,8 @@ import com.aid.train.backend.domain.user.enums.Provider;
 import com.aid.train.backend.domain.user.enums.UserStatus;
 import com.aid.train.backend.domain.scenario.repository.ScenarioRepository;
 import com.aid.train.backend.domain.user.repository.UserRepository;
+import com.aid.train.backend.global.exception.TrainException;
+import com.aid.train.backend.global.exception.enums.ErrorCode;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
@@ -119,7 +121,9 @@ class ScenarioRepositoryTest {
         // given
         Long id = 1L;
         // when
-        Scenario scenario = scenarioRepository.findScenarioByScenarioId(id);
+        Scenario scenario = scenarioRepository.findById(id).orElseThrow(
+                () -> new TrainException(ErrorCode.SCENARIO_NOT_FOUND)
+        );
         // then
         System.out.println("scenario = " + scenario);
     }
@@ -129,7 +133,7 @@ class ScenarioRepositoryTest {
     void findAllScenarios() {
         // given
         // when
-        List<Scenario> scenarioList = scenarioRepository.findAllScenario();
+        List<Scenario> scenarioList = scenarioRepository.findAll();
         // then
         System.out.println("scenario = " + scenarioList);
     }
