@@ -27,7 +27,18 @@ import lombok.*;
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class IceCandidateMessage{
-    /** ICE 후보 문자열 */
+
+    @Builder.Default
+    private MessageType type = MessageType.ICE_CANDIDATE;
+
+    private IceCandidate candidate;
+
+}
+
+@Getter @Setter @Builder
+@NoArgsConstructor @AllArgsConstructor
+class IceCandidate {
+
     private String candidate;
 
     /** ICE: 미디어 스트림 식별자 */
@@ -35,8 +46,4 @@ public class IceCandidateMessage{
 
     /** ICE: m-line index */
     private Integer sdpMLineIndex;
-
-    @Builder.Default
-    private MessageType type = MessageType.ICE_CANDIDATE;
-
 }
