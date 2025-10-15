@@ -19,13 +19,15 @@ public enum MessageType {
     ANSWER,          // SDP Answer
     ICE_CANDIDATE,   // ICE Candidate
 
-    // ===== 음성 데이터 =====
-    AUDIO_DATA,      // 사용자 음성 데이터 (바이너리)
-    AI_AUDIO,        // AI 음성 응답 (바이너리)
+    // Client → Server
+    SESSION_INIT,    // 세션 초기 파라미터 전달
+    AUDIO_DATA,      // 오디오 프레임 업스트림
+    SESSION_CLOSE,   // 정상 종료 의사 전달
 
-    // ===== AI 응답 =====
-    AI_RESPONSE,     // AI 텍스트 응답 (대화 내용)
-    AI_TRANSCRIPT,   // AI가 인식한 사용자 발화 (STT 결과)
+    // Server → Client
+    AI_TRANSCRIPT,   // 사용자 발화 STT 결과
+    AI_RESPONSE,     // AI 텍스트 응답
+    AI_AUDIO,        // AI 오디오 응답(TTS 등)
 
     // Feedback 메시지
     FEEDBACK,        // 종합 피드백 (발화 속도, 추임새, 음량 등)
