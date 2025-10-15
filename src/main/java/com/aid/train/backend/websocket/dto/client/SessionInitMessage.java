@@ -30,7 +30,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class SessionInitMessage  {
+public class SessionInitMessage extends BaseWsMessage {
     /** Scenario.id */
     private Long scenarioId;
     /** 초기 프롬프트(선택) */

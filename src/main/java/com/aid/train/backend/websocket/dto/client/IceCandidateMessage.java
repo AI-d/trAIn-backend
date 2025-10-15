@@ -1,6 +1,5 @@
-package com.aid.train.backend.websocket.dto.signaling;
+package com.aid.train.backend.websocket.dto.client;
 
-import com.aid.train.backend.websocket.dto.common.BaseWsMessage;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
@@ -29,14 +28,24 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class IceCandidateMessage {
-    /** ICE 후보 문자열 */
+public class IceCandidateMessage{
+
+    @Builder.Default
+    private MessageType type = MessageType.ICE_CANDIDATE;
+
+    private IceCandidate candidate;
+
+}
+
+@Getter @Setter @Builder
+@NoArgsConstructor @AllArgsConstructor
+class IceCandidate {
+
     private String candidate;
+
     /** ICE: 미디어 스트림 식별자 */
     private String sdpMid;
     /** ICE: m-line index */
     private Integer sdpMLineIndex;
 
-    @Builder.Default
-    private MessageType type = MessageType.ICE_CANDIDATE;
 }

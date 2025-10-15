@@ -1,7 +1,6 @@
 package com.aid.train.backend.websocket.dto.server;
 
 import com.aid.train.backend.websocket.dto.common.AudioFormat;
-import com.aid.train.backend.websocket.dto.common.BaseWsMessage;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
@@ -21,8 +20,6 @@ import lombok.*;
  * 관련 클래스:
  * - AiResponseMessage, AudioFormat
  *
- * author, since, version: 하단 태그 참조
- *
  * @author 김경민
  * @since 2025-10-15
  * @version 1.0.0
@@ -30,14 +27,19 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class AiAudioMessage extends BaseWsMessage {
+public class AiAudioMessage {
     /** 출력 보이스 프리셋(선택) */
     private String voice;
+
     /** 출력 오디오 포맷 */
     private AudioFormat format;
+
     /** 출력 오디오 데이터(Base64) */
     private byte[] audio;
 
     @Builder.Default
     private MessageType type = MessageType.AI_AUDIO;
+
+    /** 세션 식별자 */
+    private String sessionId;
 }

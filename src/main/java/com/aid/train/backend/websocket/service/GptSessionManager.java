@@ -53,7 +53,7 @@ public class GptSessionManager {
      *     ↓
      * 이 변수로 주입됨
      *
-     * 실제 값: sk-proj-Qpbt261OFI0KNlVBDpPZ_C6rz3J2z8Nymsqwr8Y2_...
+     * 실제 값: sk-...
      */
     @Value("${spring.ai.openai.api-key}")
     private String openAiApiKey;

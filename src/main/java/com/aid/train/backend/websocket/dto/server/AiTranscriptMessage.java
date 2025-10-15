@@ -1,6 +1,5 @@
 package com.aid.train.backend.websocket.dto.server;
 
-import com.aid.train.backend.websocket.dto.common.BaseWsMessage;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
@@ -21,8 +20,6 @@ import lombok.*;
  * 관련 클래스:
  * - AudioDataMessage, FeedbackMessage
  *
- * author, since, version: 하단 태그 참조
- *
  * @author 김경민
  * @since 2025-10-15
  * @version 1.0.0
@@ -30,18 +27,24 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class AiTranscriptMessage extends BaseWsMessage {
+public class AiTranscriptMessage {
     /** 인식 텍스트 */
     private String transcript;
+
     /** true면 최종 세그먼트, false면 중간 업데이트 */
     private Boolean finalSegment;
+
     /** 인식 신뢰도(가능 시) */
     private Double confidence;
+
     /** 발화 시작/종료 시각(ms) */
     private Long startMs;
     private Long endMs;
 
     @Builder.Default
     private MessageType type = MessageType.AI_TRANSCRIPT;
+
+    /** 세션 식별자 */
+    private String sessionId;
 }
 
