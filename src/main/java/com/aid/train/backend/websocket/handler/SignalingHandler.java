@@ -1,8 +1,8 @@
 package com.aid.train.backend.websocket.handler;
 
-import com.aid.train.backend.websocket.dto.signaling.AnswerMessage;
-import com.aid.train.backend.websocket.dto.signaling.IceCandidateMessage;
-import com.aid.train.backend.websocket.dto.signaling.OfferMessage;
+import com.aid.train.backend.websocket.dto.server.AnswerMessage;
+import com.aid.train.backend.websocket.dto.client.IceCandidateMessage;
+import com.aid.train.backend.websocket.dto.client.OfferMessage;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.aid.train.backend.websocket.service.WebRtcStateManager;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -145,10 +145,6 @@ public class SignalingHandler extends TextWebSocketHandler {
         AnswerMessage answer = AnswerMessage.builder()
                 .sdp("v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\n")
                 .build();
-
-        // BaseWsMessage 필드는 별도 설정
-        answer.setSessionId(sessionId);
-        answer.setType(MessageType.ANSWER);
 
         String answerJson = objectMapper.writeValueAsString(answer);
         session.sendMessage(new TextMessage(answerJson));

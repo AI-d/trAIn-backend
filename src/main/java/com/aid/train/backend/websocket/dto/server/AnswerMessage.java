@@ -1,6 +1,5 @@
-package com.aid.train.backend.websocket.dto.signaling;
+package com.aid.train.backend.websocket.dto.server;
 
-import com.aid.train.backend.websocket.dto.common.BaseWsMessage;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
@@ -27,7 +26,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class AnswerMessage extends BaseWsMessage {
+public class AnswerMessage{
     /** SDP 본문(Answer) */
     private String sdp;
 

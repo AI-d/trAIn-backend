@@ -1,7 +1,6 @@
 package com.aid.train.backend.websocket.dto.client;
 
 import com.aid.train.backend.websocket.dto.common.AudioFormat;
-import com.aid.train.backend.websocket.dto.common.BaseWsMessage;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
@@ -28,7 +27,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class AudioDataMessage extends BaseWsMessage {
+public class AudioDataMessage {
     /** 입력 프레임 포맷 */
     private AudioFormat format;
 

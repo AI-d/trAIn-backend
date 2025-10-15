@@ -1,6 +1,5 @@
 package com.aid.train.backend.websocket.dto.server;
 
-import com.aid.train.backend.websocket.dto.common.BaseWsMessage;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
@@ -27,7 +26,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class AiResponseMessage extends BaseWsMessage {
+public class AiResponseMessage {
     /** 생성 텍스트 */
     private String transcript;
 
@@ -39,4 +38,7 @@ public class AiResponseMessage extends BaseWsMessage {
 
     @Builder.Default
     private MessageType type = MessageType.AI_RESPONSE;
+
+    /** 세션 식별자 */
+    private String sessionId;
 }

@@ -1,6 +1,5 @@
 package com.aid.train.backend.websocket.dto.server;
 
-import com.aid.train.backend.websocket.dto.common.BaseWsMessage;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
@@ -27,7 +26,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class FeedbackMessage extends BaseWsMessage {
+public class FeedbackMessage{
     /** 분당 단어수(또는 자수 환산 지표) */
     private Integer wpm;
 
@@ -54,4 +53,7 @@ public class FeedbackMessage extends BaseWsMessage {
 
     @Builder.Default
     private MessageType type = MessageType.FEEDBACK; // 필요 시 SPEED/FILLER/EMOTION 타입 사용 가능
+
+    /** 세션 식별자 */
+    private String sessionId;
 }
