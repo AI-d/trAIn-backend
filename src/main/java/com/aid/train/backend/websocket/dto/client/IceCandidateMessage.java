@@ -20,8 +20,6 @@ import lombok.*;
  * 관련 클래스:
  * - OfferMessage, AnswerMessage
  *
- * author, since, version: 하단 태그 참조
- *
  * @author 김경민
  * @since 2025-10-15
  * @version 1.0.0
@@ -32,8 +30,10 @@ import lombok.*;
 public class IceCandidateMessage extends BaseWsMessage {
     /** ICE 후보 문자열 */
     private String candidate;
+
     /** ICE: 미디어 스트림 식별자 */
     private String sdpMid;
+
     /** ICE: m-line index */
     private Integer sdpMLineIndex;
 

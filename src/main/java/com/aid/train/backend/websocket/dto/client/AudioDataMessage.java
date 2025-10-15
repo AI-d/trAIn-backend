@@ -21,8 +21,6 @@ import lombok.*;
  * 관련 클래스:
  * - SessionInitMessage, AiTranscriptMessage, FeedbackMessage
  *
- * author, since, version: 하단 태그 참조
- *
  * @author 김경민
  * @since 2025-10-15
  * @version 1.0.0
@@ -33,6 +31,7 @@ import lombok.*;
 public class AudioDataMessage extends BaseWsMessage {
     /** 입력 프레임 포맷 */
     private AudioFormat format;
+
     /** Base64 직렬화된 오디오 프레임 */
     private byte[] audio;
 

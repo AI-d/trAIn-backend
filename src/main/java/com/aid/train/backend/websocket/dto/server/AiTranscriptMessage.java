@@ -21,8 +21,6 @@ import lombok.*;
  * 관련 클래스:
  * - AudioDataMessage, FeedbackMessage
  *
- * author, since, version: 하단 태그 참조
- *
  * @author 김경민
  * @since 2025-10-15
  * @version 1.0.0
@@ -33,10 +31,13 @@ import lombok.*;
 public class AiTranscriptMessage extends BaseWsMessage {
     /** 인식 텍스트 */
     private String transcript;
+
     /** true면 최종 세그먼트, false면 중간 업데이트 */
     private Boolean finalSegment;
+
     /** 인식 신뢰도(가능 시) */
     private Double confidence;
+
     /** 발화 시작/종료 시각(ms) */
     private Long startMs;
     private Long endMs;

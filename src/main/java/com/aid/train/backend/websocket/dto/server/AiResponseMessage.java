@@ -20,8 +20,6 @@ import lombok.*;
  * 관련 클래스:
  * - AiAudioMessage, AiTranscriptMessage
  *
- * author, since, version: 하단 태그 참조
- *
  * @author 김경민
  * @since 2025-10-15
  * @version 1.0.0
@@ -32,8 +30,10 @@ import lombok.*;
 public class AiResponseMessage extends BaseWsMessage {
     /** 생성 텍스트 */
     private String transcript;
+
     /** 최종 세ग먼트 여부 */
     private Boolean finalSegment;
+
     /** 처리 지연(ms, 선택) */
     private Long latencyMs;
 

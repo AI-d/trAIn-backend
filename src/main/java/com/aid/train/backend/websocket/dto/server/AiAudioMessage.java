@@ -21,8 +21,6 @@ import lombok.*;
  * 관련 클래스:
  * - AiResponseMessage, AudioFormat
  *
- * author, since, version: 하단 태그 참조
- *
  * @author 김경민
  * @since 2025-10-15
  * @version 1.0.0
@@ -33,8 +31,10 @@ import lombok.*;
 public class AiAudioMessage extends BaseWsMessage {
     /** 출력 보이스 프리셋(선택) */
     private String voice;
+
     /** 출력 오디오 포맷 */
     private AudioFormat format;
+
     /** 출력 오디오 데이터(Base64) */
     private byte[] audio;
 

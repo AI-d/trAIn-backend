@@ -20,8 +20,6 @@ import lombok.*;
  * 관련 클래스:
  * - OfferMessage, IceCandidateMessage
  *
- * author, since, version: 하단 태그 참조
- *
  * @author 김경민
  * @since 2025-10-15
  * @version 1.0.0
