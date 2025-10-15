@@ -24,7 +24,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class OfferMessage extends BaseWsMessage {
+public class OfferMessage  {
     /** SDP 본문(Offer) */
     private String sdp;
 

@@ -30,7 +30,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class AudioDataMessage extends BaseWsMessage {
+public class AudioDataMessage {
     /** 입력 프레임 포맷 */
     private AudioFormat format;
     /** Base64 직렬화된 오디오 프레임 */

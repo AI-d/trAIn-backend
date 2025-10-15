@@ -29,7 +29,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class IceCandidateMessage extends BaseWsMessage {
+public class IceCandidateMessage {
     /** ICE 후보 문자열 */
     private String candidate;
     /** ICE: 미디어 스트림 식별자 */

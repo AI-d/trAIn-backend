@@ -29,7 +29,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class AnswerMessage extends BaseWsMessage {
+public class AnswerMessage {
     /** SDP 본문(Answer) */
     private String sdp;
 

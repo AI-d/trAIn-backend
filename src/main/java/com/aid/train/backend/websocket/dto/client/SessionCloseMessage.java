@@ -29,7 +29,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class SessionCloseMessage extends BaseWsMessage {
+public class SessionCloseMessage  {
     /** 종료 사유(선택) */
     private String reason;
 
