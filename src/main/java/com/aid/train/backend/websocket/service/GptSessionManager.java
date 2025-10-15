@@ -5,11 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,32 +48,9 @@ public class GptSessionManager {
 
     /**
      * OpenAI API Key (환경변수에서 주입)
-     *
-     * 설정 경로:
-     * .env 파일: OPENAI_API_KEY=sk-proj-...
-     *     ↓
-     * application.yml: spring.ai.openai.api-key: ${OPENAI_API_KEY}
-     *     ↓
-     * 이 변수로 주입됨
-     *
-     * 실제 값: sk-proj-Qpbt261OFI0KNlVBDpPZ_C6rz3J2z8Nymsqwr8Y2_...
      */
     @Value("${spring.ai.openai.api-key}")
     private String openAiApiKey;
-
-    /**
-     * GPT Realtime API WebSocket URL
-     *
-     * 일반 Chat API와 다름:
-     * - Chat API: https://api.openai.com/v1/chat/completions (REST)
-     * - Realtime API: wss://api.openai.com/v1/realtime (WebSocket)
-     *
-     * Realtime API 특징:
-     * - 실시간 음성 대화
-     * - STT + LLM + TTS 통합
-     * - WebSocket으로 양방향 통신
-     */
-    private static final String GPT_REALTIME_URL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01";
 
     /**
      * sessionId → GPT WebSocket 연결 매핑
@@ -113,6 +93,14 @@ public class GptSessionManager {
             // 2. GPT 응답 핸들러 등록
             responseHandlers.put(sessionId, responseHandler);
 
+            // URL에 모든 설정값(모델, 음성, 프롬프트)을 포함하여 동적으로 생성
+            String instructions = URLEncoder.encode(prompt, StandardCharsets.UTF_8);
+            String gptRealtimeUrl = String.format(
+                    "wss://api.openai.com/v1/realtime?model=gpt-realtime-2025-08-28",
+                    voice.toLowerCase(),
+                    instructions
+            );
+
             // 3. GPT WebSocket 핸들러 생성
             TextWebSocketHandler handler = new TextWebSocketHandler() {
                 @Override
@@ -120,15 +108,13 @@ public class GptSessionManager {
                     log.info("GPT WebSocket 연결 성공 - sessionId: {}", sessionId);
                     gptSessions.put(sessionId, session);
 
-                    // 세션 초기화 메시지 전송
-                    sendSessionCreate(sessionId, prompt, voice);
                 }
 
                 @Override
                 protected void handleTextMessage(WebSocketSession session, TextMessage message) {
                     // GPT 응답 수신 → responseHandler로 전달
                     String payload = message.getPayload();
-                    log.debug("GPT 응답 수신 - sessionId: {}", sessionId);
+                    log.debug("GPT 응답 수신 (전체) - sessionId: {}, payload: {}", sessionId, payload);
 
                     GptResponseHandler handler = responseHandlers.get(sessionId);
                     if (handler != null) {
@@ -154,47 +140,12 @@ public class GptSessionManager {
 
             log.debug("API Key 사용: {}...", openAiApiKey.substring(0, 20));
 
-            client.execute(handler, headers, URI.create(GPT_REALTIME_URL));
+            client.execute(handler, headers, URI.create(gptRealtimeUrl));
 
         } catch (Exception e) {
             log.error("GPT 세션 생성 실패 - sessionId: {}", sessionId, e);
             throw new RuntimeException("GPT 세션 생성 실패: " + e.getMessage(), e);
         }
-    }
-
-    /**
-     * GPT에 세션 초기화 메시지를 전송합니다.
-     *
-     * 메시지 형식:
-     * {
-     *   "type": "session.create",
-     *   "session": {
-     *     "model": "gpt-4o-realtime-preview",
-     *     "instructions": "당신은 상사입니다...",
-     *     "voice": "onyx",
-     *     "temperature": 0.8
-     *   }
-     * }
-     *
-     * @param sessionId 대화 세션 ID
-     * @param prompt 시나리오 프롬프트
-     * @param voice GPT 음성
-     */
-    private void sendSessionCreate(String sessionId, String prompt, String voice) {
-        String message = String.format("""
-            {
-                "type": "session.create",
-                "session": {
-                    "model": "gpt-4o-realtime-preview",
-                    "instructions": "%s",
-                    "voice": "%s",
-                    "temperature": 0.8
-                }
-            }
-            """, escapeJson(prompt), voice.toLowerCase());
-
-        sendToGpt(sessionId, message);
-        log.info("GPT 세션 초기화 메시지 전송 완료 - sessionId: {}", sessionId);
     }
 
     /**
@@ -334,20 +285,6 @@ public class GptSessionManager {
         gptSessions.clear();
         responseHandlers.clear();
         log.info("모든 GPT 세션 종료 완료 - 종료된 세션 수: {}", count);
-    }
-
-    /**
-     * JSON 문자열 이스케이프 처리
-     *
-     * @param text 원본 텍스트
-     * @return 이스케이프된 텍스트
-     */
-    private String escapeJson(String text) {
-        return text.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
     }
 
     /**

@@ -19,6 +19,7 @@ public class SecurityConfig {
 
                 // 요청 권한 설정
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/test/**").permitAll()    // 테스트용 엔드포인트 허용 (필요시 제거)
                         .requestMatchers("/ws/**").permitAll()          // WebSocket 전체 허용
                         .requestMatchers("/api/**").permitAll()    // 인증 API 허용
                         .anyRequest().authenticated()                   // 나머지는 인증 필요
