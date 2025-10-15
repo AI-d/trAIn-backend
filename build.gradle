@@ -38,6 +38,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
+    // ===== JSON Processing =====
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.google.code.gson:gson:2.10.1'
+
     // ===== AI Integration =====
     // Spring AI OpenAI (Swagger 의존성 제외)
     implementation("org.springframework.ai:spring-ai-openai-spring-boot-starter:${springAiVersion}") {
