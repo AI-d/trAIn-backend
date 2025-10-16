@@ -47,17 +47,21 @@ public class AudioHandler extends AbstractWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         JsonObject data = JsonParser.parseString(message.getPayload()).getAsJsonObject();
-        if ("start_session".equals(data.get("type").getAsString())) {
+        if ("SESSION_INIT".equals(data.get("type").getAsString())) {
             Long scenarioId = data.get("scenarioId").getAsLong();
             String sessionId = extractSessionId(session);
 
             // 시나리오 ID를 세션 속성에 저장
             session.getAttributes().put("scenarioId", scenarioId);
 
+
             // 세션 초기화 (GPT 연결, DialogueSession 생성 등)
             sessionCoordinator.initializeSession(sessionId, session, scenarioId);
             log.info("GPT 세션 생성 완료 - sessionId: {}", sessionId);
+
+
         }
+
 
     }
         /**
