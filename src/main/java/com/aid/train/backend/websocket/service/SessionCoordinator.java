@@ -1,6 +1,11 @@
 package com.aid.train.backend.websocket.service;
 
+import com.aid.train.backend.domain.scenario.dto.response.ScenarioResponseDto;
+import com.aid.train.backend.domain.scenario.entity.Scenario;
+import com.aid.train.backend.domain.scenario.repository.ScenarioRepository;
 import com.aid.train.backend.domain.session.entity.DialogueSession;
+import com.aid.train.backend.websocket.dto.client.SessionInitMessage;
+import com.aid.train.backend.websocket.dto.common.AudioFormat;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +15,7 @@ import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Base64;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 모든 세션 관련 Manager를 통합 조정하는 코디네이터
@@ -38,6 +44,11 @@ public class SessionCoordinator {
     private final GptSessionManager gptSessionManager;
     private final WebRtcStateManager webRtcStateManager;
 
+    private final ScenarioRepository scenarioRepository;
+
+
+    private final Map<String, GptSession> gptSessionMap = new ConcurrentHashMap<>();
+
     /**
      * 세션 전체를 초기화합니다.
      *
@@ -54,9 +65,10 @@ public class SessionCoordinator {
      * @param sessionId 대화 세션 ID
      * @param wsSession WebSocket 연결 객체
      */
-    public void initializeSession(String sessionId, WebSocketSession wsSession) {
+    public void initializeSession(String sessionId, WebSocketSession wsSession, Long scenarioId) {
         try {
             log.info("세션 초기화 시작 - sessionId: {}", sessionId);
+            log.info("시나리오 id: {}", scenarioId);
 
             // 1. WebSocket 세션 등록
             wsSessionManager.registerSession(sessionId, wsSession);
@@ -66,14 +78,22 @@ public class SessionCoordinator {
             DialogueSession dialogueSession = dialogueSessionMapper.getDialogueSession(sessionId);
 
             // 3. 시나리오 정보 추출
-            String prompt = dialogueSession.getScenario().getPrompt();
-            String voice = dialogueSession.getScenario().getVoice().name().toLowerCase();
+            /*String prompt = dialogueSession.getScenario().getPrompt();
+            String voice = dialogueSession.getScenario().getVoice().name().toLowerCase();*/
+            Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow();
+            
+            AudioFormat audioFormat = AudioFormat.builder()
+                    .sampleRate(48000)   // 서버에서 기본값
+                    .channels(1)     // mono
+                    .encoding("pcm16")   // PCM 16-bit
+                    .build();
+
+            SessionInitMessage initMessage = SessionInitMessage.fromEntity(scenario, audioFormat);
 
             // 4. GPT Realtime API 연결
             gptSessionManager.createGptSession(
                     sessionId,
-                    prompt,
-                    voice,
+                    initMessage,
                     this::handleGptResponse
             );
 
@@ -284,5 +304,9 @@ public class SessionCoordinator {
         wsSessionManager.clearAll();
 
         log.info("모든 세션 종료 완료");
+    }
+
+    public boolean hasGptSession(String sessionId) {
+        return gptSessionMap.containsKey(sessionId);
     }
 }

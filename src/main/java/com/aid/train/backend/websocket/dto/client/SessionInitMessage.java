@@ -1,5 +1,6 @@
 package com.aid.train.backend.websocket.dto.client;
 
+import com.aid.train.backend.domain.scenario.entity.Scenario;
 import com.aid.train.backend.websocket.dto.common.AudioFormat;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -43,4 +44,16 @@ public class SessionInitMessage {
 
     @Builder.Default
     private MessageType type = MessageType.SESSION_INIT;
+
+
+    // gpt 프롬프트 생성 편의 메소드
+    public static SessionInitMessage fromEntity(Scenario scenario, AudioFormat audioFormat) {
+        return SessionInitMessage.builder()
+                .scenarioId(scenario.getId())
+                .prompt(scenario.getPrompt())
+                .locale(scenario.getLocale())
+                .voice(scenario.getVoice().name())
+                .audioFormat(audioFormat)
+                .build();
+    }
 }

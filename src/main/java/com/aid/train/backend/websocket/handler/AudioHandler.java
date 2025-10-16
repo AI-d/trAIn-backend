@@ -2,12 +2,16 @@ package com.aid.train.backend.websocket.handler;
 
 import com.aid.train.backend.websocket.service.SessionCoordinator;
 import com.aid.train.backend.websocket.service.WebRtcStateManager;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
 /**
@@ -35,33 +39,50 @@ import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class AudioHandler extends BinaryWebSocketHandler {
+public class AudioHandler extends AbstractWebSocketHandler {
 
     private final SessionCoordinator sessionCoordinator;
     private final WebRtcStateManager webRtcStateManager;
 
-    /**
-     * WebSocket 연결이 성공했을 때 호출됩니다.
-     *
-     * 처리 내용:
-     * 1. URI에서 sessionId 추출
-     * 2. SessionCoordinator를 통해 전체 세션 초기화
-     *    - WebSocket 세션 등록
-     *    - DB 조회 및 매핑
-     *    - GPT 연결
-     *    - WebRTC 상태 초기화
-     *
-     * @param session WebSocket 연결 객체
-     */
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+        JsonObject data = JsonParser.parseString(message.getPayload()).getAsJsonObject();
+        if ("start_session".equals(data.get("type").getAsString())) {
+            Long scenarioId = data.get("scenarioId").getAsLong();
+            String sessionId = extractSessionId(session);
+
+            // 시나리오 ID를 세션 속성에 저장
+            session.getAttributes().put("scenarioId", scenarioId);
+
+            // 세션 초기화 (GPT 연결, DialogueSession 생성 등)
+            sessionCoordinator.initializeSession(sessionId, session, scenarioId);
+            log.info("GPT 세션 생성 완료 - sessionId: {}", sessionId);
+        }
+
+    }
+        /**
+         * WebSocket 연결이 성공했을 때 호출됩니다.
+         *
+         * 처리 내용:
+         * 1. URI에서 sessionId 추출
+         * 2. SessionCoordinator를 통해 전체 세션 초기화
+         *    - WebSocket 세션 등록
+         *    - DB 조회 및 매핑
+         *    - GPT 연결
+         *    - WebRTC 상태 초기화
+         *
+         * @param session WebSocket 연결 객체
+         */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String sessionId = extractSessionId(session);
+
 
         log.info("AudioHandler - WebSocket 연결 시작 - sessionId: {}", sessionId);
 
         try {
             // SessionCoordinator를 통해 전체 초기화
-            sessionCoordinator.initializeSession(sessionId, session);
+            // sessionCoordinator.initializeSession(sessionId, session, scenarioId);
 
             log.info("AudioHandler - 세션 초기화 완료 - sessionId: {}", sessionId);
 
@@ -105,6 +126,12 @@ public class AudioHandler extends BinaryWebSocketHandler {
             }
 
             // 3. SessionCoordinator를 통해 GPT로 라우팅
+            if (!sessionCoordinator.hasGptSession(sessionId)) {
+                log.warn("GPT 세션 없음, 큐에 저장 - sessionId: {}", sessionId);
+                sessionCoordinator.queueAudio(sessionId, audioData);
+                return;
+            }
+
             sessionCoordinator.routeAudioToGpt(sessionId, audioData);
 
         } catch (Exception e) {
