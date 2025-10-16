@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author 김경민
  * @since 2025-10-13
- * @version 1.1.0
+ * @version 1.2.0
  */
 @Slf4j
 @Component
@@ -188,10 +188,18 @@ public class SignalingHandler extends TextWebSocketHandler {
         String sessionId = extractSessionId(session);
 
         // ICE Candidate 파싱
-        IceCandidateMessage candidate = objectMapper.readValue(payload, IceCandidateMessage.class);
+        IceCandidateMessage message = objectMapper.readValue(payload, IceCandidateMessage.class);
 
-        log.info("SignalingHandler - ICE_CANDIDATE 수신 - sessionId: {}, candidate: {}",
-                sessionId, candidate.getCandidate());
+        // 중첩된 candidate 객체에서 실제 candidate 문자열 추출
+        String candidateString = message.getCandidate() != null
+                ? message.getCandidate().getCandidate()
+                : null;
+
+        log.info("SignalingHandler - ICE_CANDIDATE 수신 - sessionId: {}, candidate: {}, sdpMid: {}, sdpMLineIndex: {}",
+                sessionId,
+                candidateString,
+                message.getCandidate() != null ? message.getCandidate().getSdpMid() : null,
+                message.getCandidate() != null ? message.getCandidate().getSdpMLineIndex() : null);
 
         // TODO: ICE Candidate 처리 로직
         // PeerConnection에 addIceCandidate 등
@@ -270,4 +278,5 @@ public class SignalingHandler extends TextWebSocketHandler {
         String[] parts = path.split("/");
         return parts[parts.length - 1];
     }
+
 }

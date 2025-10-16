@@ -24,7 +24,7 @@ import java.util.Base64;
  * - 사용자 접속/종료 시 모든 Manager를 한 번에 처리
  * - 음성 데이터 흐름을 중앙에서 제어
  *
- * @author 진도희
+ * @author 김경민
  * @since 2025-10-15
  * @version 1.0.0
  */
@@ -168,7 +168,8 @@ public class SessionCoordinator {
                 log.debug("GPT 응답 처리 완료 - sessionId: {}, 크기: {} bytes",
                         sessionId, audioData.length);
             } else {
-                log.debug("GPT 응답 타입: {} - sessionId: {}", type, sessionId);
+                // "error"를 포함한 모든 응답의 전체 내용을 로그로 남깁니다.
+                log.debug("GPT 응답 수신 (전체) - sessionId: {}, payload: {}", sessionId, jsonResponse);
             }
 
         } catch (Exception e) {
