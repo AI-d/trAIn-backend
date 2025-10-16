@@ -172,6 +172,7 @@ public class GptSessionManager {
             log.error("GPT 세션 생성 실패 - sessionId: {}", sessionId, e);
             throw new RuntimeException("GPT 세션 생성 실패: " + e.getMessage(), e);
         }
+
     }
 
     /**
