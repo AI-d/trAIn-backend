@@ -15,6 +15,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -130,6 +131,41 @@ public class GptSessionManager {
             headers.add("OpenAI-Beta", "realtime=v1");
 
             log.debug("API Key 사용: {}...", openAiApiKey.substring(0, 20));
+
+            URI uri = new URI("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-10-15");
+            CompletableFuture<WebSocketSession> future = client.execute(
+                    new TextWebSocketHandler() {
+                        @Override
+                        public void afterConnectionEstablished(WebSocketSession session) {
+                            log.info("GPT WebSocket 연결 성공 - sessionId: {}", sessionId);
+                            gptSessions.put(sessionId, session);
+                        }
+
+                        @Override
+                        protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+                            GptResponseHandler handler = responseHandlers.get(sessionId);
+                            if (handler != null) {
+                                handler.handleGptResponse(sessionId, message.getPayload());
+                            }
+                        }
+
+                        @Override
+                        public void handleTransportError(WebSocketSession session, Throwable exception) {
+                            log.error("GPT WebSocket 에러 - sessionId: {}", sessionId, exception);
+                        }
+                    },
+                    headers, // WebSocketHttpHeaders
+                    uri      // 연결할 URI
+            );
+
+            // 연결 성공/실패 로그
+            future.whenComplete((session, ex) -> {
+                if (ex != null) {
+                    log.error("GPT WebSocket handshake 실패 - sessionId: {}", sessionId, ex);
+                } else {
+                    log.info("GPT WebSocket handshake 성공 - sessionId: {}", sessionId);
+                }
+            });
 
 
         } catch (Exception e) {
