@@ -6,6 +6,7 @@ import com.aid.train.backend.domain.scenario.repository.ScenarioRepository;
 import com.aid.train.backend.domain.session.entity.DialogueSession;
 import com.aid.train.backend.websocket.dto.client.SessionInitMessage;
 import com.aid.train.backend.websocket.dto.common.AudioFormat;
+import com.aid.train.backend.websocket.model.GptSession;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,8 @@ import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Base64;
+import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -96,6 +99,15 @@ public class SessionCoordinator {
                     initMessage,
                     this::handleGptResponse
             );
+
+            GptSession gptSession = gptSessionMap.get(sessionId);
+            if (gptSession != null) {
+                Queue<byte[]> queue = gptSession.getAudioQueue();
+                while (!queue.isEmpty()) {
+                    byte[] chunk = queue.poll();
+                    gptSessionManager.sendAudioToGpt(sessionId, chunk);
+                }
+            }
 
             // 5. WebRTC 상태 초기화
             webRtcStateManager.initializeState(sessionId);
@@ -308,5 +320,16 @@ public class SessionCoordinator {
 
     public boolean hasGptSession(String sessionId) {
         return gptSessionMap.containsKey(sessionId);
+    }
+
+    public void queueAudio(String sessionId, byte[] audioData) {
+        GptSession gptSession = gptSessionMap.get(sessionId);
+        if (gptSession == null) {
+            log.warn("GPT 세션 없음, 오디오 큐에 저장 불가 - sessionId: {}", sessionId);
+            return;
+        }
+
+        gptSession.getAudioQueue().offer(audioData);
+        log.debug("오디오 큐에 저장 - sessionId: {}, 큐 크기: {}", sessionId, gptSession.getAudioQueue().size());
     }
 }
