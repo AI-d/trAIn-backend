@@ -1,7 +1,6 @@
 package com.aid.train.backend.websocket.dto.client;
 
 import com.aid.train.backend.websocket.dto.common.AudioFormat;
-import com.aid.train.backend.websocket.dto.common.BaseWsMessage;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
@@ -30,7 +29,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class SessionInitMessage extends BaseWsMessage {
+public class SessionInitMessage {
     /** Scenario.id */
     private Long scenarioId;
     /** 초기 프롬프트(선택) */

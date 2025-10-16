@@ -33,13 +33,6 @@ public class IceCandidateMessage{
     @Builder.Default
     private MessageType type = MessageType.ICE_CANDIDATE;
 
-    private IceCandidate candidate;
-
-}
-
-@Getter @Setter @Builder
-@NoArgsConstructor @AllArgsConstructor
-class IceCandidate {
 
     private String candidate;
 
@@ -49,3 +42,5 @@ class IceCandidate {
     private Integer sdpMLineIndex;
 
 }
+
+
