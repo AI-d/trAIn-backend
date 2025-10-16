@@ -27,16 +27,31 @@ import lombok.*;
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class IceCandidateMessage{
-    /** ICE 후보 문자열 */
-    private String candidate;
-
-    /** ICE: 미디어 스트림 식별자 */
-    private String sdpMid;
-
-    /** ICE: m-line index */
-    private Integer sdpMLineIndex;
 
     @Builder.Default
     private MessageType type = MessageType.ICE_CANDIDATE;
+
+    /** ICE 후보 객체 */
+    private IceCandidate candidate;
+
+    /**
+     * ICE Candidate 내부 구조
+     */
+    @Getter @Setter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class IceCandidate {
+        /** ICE 후보 문자열 */
+        private String candidate;
+
+        /** 미디어 스트림 식별자 */
+        private String sdpMid;
+
+        /** m-line index */
+        private Integer sdpMLineIndex;
+
+        /** Username Fragment (optional) */
+        private String usernameFragment;
+    }
 
 }
