@@ -14,6 +14,7 @@ package com.aid.train.backend.global.response;
  * }
  * </pre>
  */
+import com.aid.train.backend.global.exception.enums.ErrorCode;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -37,6 +38,10 @@ public class ApiResponse<T> {
     // 응답 Json
     private T data;
 
+    // 에러 코드 (에러 응답 시에만 사용)
+    private String errorCode;
+
+
     /**
      * Api 성공 응답을 생성합니다.
      *
@@ -51,6 +56,51 @@ public class ApiResponse<T> {
                 .message(message)
                 .timestamp(LocalDateTime.now())
                 .data(data)
+                .build();
+    }
+
+    /**
+     * API 에러 응답을 생성합니다. (ErrorCode 사용)
+     *
+     * @param errorCode 에러 코드 enum
+     * @return ApiResponse 에러 응답 객체
+     */
+    public static ApiResponse<?> error(ErrorCode errorCode) {
+        return ApiResponse.builder()
+                .success(false)
+                .message(errorCode.getMessage())
+                .errorCode(errorCode.getCode())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    /**
+     * API 에러 응답을 생성합니다. (ErrorCode + 커스텀 메시지)
+     *
+     * @param errorCode      에러 코드 enum
+     * @param customMessage  커스텀 에러 메시지
+     * @return ApiResponse 에러 응답 객체
+     */
+    public static ApiResponse<?> error(ErrorCode errorCode, String customMessage) {
+        return ApiResponse.builder()
+                .success(false)
+                .message(customMessage)
+                .errorCode(errorCode.getCode())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    /**
+     * API 에러 응답을 생성합니다. (메시지만 사용)
+     *
+     * @param message 에러 메시지
+     * @return ApiResponse 에러 응답 객체
+     */
+    public static ApiResponse<?> error(String message) {
+        return ApiResponse.builder()
+                .success(false)
+                .message(message)
+                .timestamp(LocalDateTime.now())
                 .build();
     }
 }

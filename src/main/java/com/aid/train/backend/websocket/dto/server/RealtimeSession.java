@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 @Builder
 public record RealtimeSession (
-        String type,
         String model,
         String instructions,
         String voice,

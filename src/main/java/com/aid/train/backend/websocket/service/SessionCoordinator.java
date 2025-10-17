@@ -119,20 +119,17 @@ public class SessionCoordinator {
                     .build();
 
             RealtimeSession session = RealtimeSession.builder()
-                    .type("realtime")
                     .model("gpt-4o-realtime-preview-2025-10-15")
                     .instructions(instructions)
                     .voice(scenario.getVoice().name())
                     .locale(scenario.getLocale())
                     .build();
 
-            SessionInitMessage message = SessionInitMessage.makePrompt(session, audioFormat);
-            String prompt = objectMapper.writeValueAsString(message);
-
             // 4. GPT Realtime API 연결
             gptSessionManager.createGptSession(
                     sessionId,
-                    prompt,
+                    audioFormat,
+                    session,
                     this::handleGptResponse
             );
 

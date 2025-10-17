@@ -40,6 +40,13 @@ public enum ErrorCode {
     SCENARIO_ALREADY_DELETED("SCENARIO_ALREADY_DELETED", "이미 삭제된 시나리오입니다.", 409),
     DEFAULT_SCENARIO_DELETE_FORBIDDEN("DEFAULT_SCENARIO_DELETE_FORBIDDEN", "기본 시나리오는 삭제할 수 없습니다.", 409),
 
+    // =========================
+    // 세션 관련
+    // =========================
+    SESSION_NOT_FOUND("SESSION_001", "세션을 찾을 수 없습니다.", 404),
+    SESSION_ALREADY_COMPLETED("SESSION_002", "이미 종료된 세션입니다.", 400),
+    SESSION_INVALID_STATUS("SESSION_003", "유효하지 않은 세션 상태입니다.", 400),
+
     // 비즈니스 에러 코드
     BUSINESS_ERROR("BUSINESS_ERROR", "비즈니스 로직 오류가 발생했습니다.", 400),
     DUPLICATE_RESOURCE("DUPLICATE_RESOURCE", "이미 존재하는 리소스입니다.", 409),
