@@ -89,7 +89,7 @@ public class GptSessionManager {
      * @param sessionId 대화 세션 ID
      * @param responseHandler GPT 응답을 처리할 핸들러
      */
-    public void createGptSession(String sessionId, AudioFormat audioFormat, RealtimeSession aiSession, GptResponseHandler responseHandler) {
+    public void createGptSession(String sessionId, SessionInitMessage message, GptResponseHandler responseHandler) {
         try {
             log.info("GPT 세션 생성 시작 - sessionId: {},", sessionId);
 
@@ -145,25 +145,32 @@ public class GptSessionManager {
                             log.info("GPT WebSocket 연결 성공 - sessionId: {}", sessionId);
                             gptSessions.put(sessionId, session);
 
-                            SessionInitMessage message = SessionInitMessage.makePrompt(aiSession, audioFormat);
-                            String prompt;
+                            String prompt = null ;
 
                             try {
                                 prompt = objectMapper.writeValueAsString(message);
+                                session.sendMessage(new TextMessage(prompt));
+                                log.info("GPT 시나리오 전송 - sessionId: {}", sessionId);
+
                             } catch (JsonProcessingException e) {
+
+                                log.error("시나리오 JSON 변환 실패 - sessionId: {}", sessionId, e);
+                                throw new RuntimeException(e);
+                            } catch (IOException e) {
+
+                                log.error("GPT 메시지 전송 실패 - sessionId: {}", sessionId, e);
                                 throw new RuntimeException(e);
                             }
 
-                            try {
-                                session.sendMessage(new TextMessage(prompt));
-                                log.info("프롬프트 전달 성공 - sessionId: {}, prompt: {}", sessionId, prompt);
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
                         }
 
                         @Override
                         protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+                            String payload = message.getPayload();
+                            log.debug("GPT 응답 수신 - sessionId: {}, payload: {}", sessionId, payload);
+
+
+
                             GptResponseHandler handler = responseHandlers.get(sessionId);
                             if (handler != null) {
                                 handler.handleGptResponse(sessionId, message.getPayload());

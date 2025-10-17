@@ -1,13 +1,12 @@
 package com.aid.train.backend.websocket.service;
 
-import com.aid.train.backend.domain.scenario.dto.response.ScenarioResponseDto;
 import com.aid.train.backend.domain.scenario.entity.Scenario;
 import com.aid.train.backend.domain.scenario.repository.ScenarioRepository;
 import com.aid.train.backend.domain.session.entity.DialogueSession;
 import com.aid.train.backend.websocket.dto.client.SessionInitMessage;
 import com.aid.train.backend.websocket.dto.common.AudioFormat;
 import com.aid.train.backend.websocket.dto.server.RealtimeSession;
-import com.aid.train.backend.websocket.model.GptSession;
+import com.aid.train.backend.websocket.dto.server.GptSession;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -125,11 +124,12 @@ public class SessionCoordinator {
                     .locale(scenario.getLocale())
                     .build();
 
+            SessionInitMessage message = SessionInitMessage.makePrompt(session, audioFormat);
+
             // 4. GPT Realtime API 연결
             gptSessionManager.createGptSession(
                     sessionId,
-                    audioFormat,
-                    session,
+                    message,
                     this::handleGptResponse
             );
 
