@@ -84,6 +84,7 @@ public class SessionCoordinator {
             /*String prompt = dialogueSession.getScenario().getPrompt();
             String voice = dialogueSession.getScenario().getVoice().name().toLowerCase();*/
             Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow();
+            log.info("시나리오 조회 성공: {}", scenario.getTitle());
             
             AudioFormat audioFormat = AudioFormat.builder()
                     .sampleRate(48000)   // 서버에서 기본값

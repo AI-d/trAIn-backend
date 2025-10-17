@@ -84,7 +84,7 @@ public class GptSessionManager {
      * @param prompt 프롬프트
      * @param responseHandler GPT 응답을 처리할 핸들러
      */
-    public void createGptSession(String sessionId, SessionInitMessage prompt,GptResponseHandler responseHandler) {
+    public void createGptSession(String sessionId, SessionInitMessage prompt, GptResponseHandler responseHandler) {
         try {
             log.info("GPT 세션 생성 시작 - sessionId: {}, voice: {}", sessionId, prompt.getVoice());
 
