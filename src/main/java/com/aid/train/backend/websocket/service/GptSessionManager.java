@@ -1,6 +1,10 @@
 package com.aid.train.backend.websocket.service;
 
 import com.aid.train.backend.websocket.dto.client.SessionInitMessage;
+import com.aid.train.backend.websocket.dto.common.AudioFormat;
+import com.aid.train.backend.websocket.dto.server.RealtimeSession;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,6 +59,8 @@ public class GptSessionManager {
     @Value("${spring.ai.openai.api-key}")
     private String openAiApiKey;
 
+    private ObjectMapper objectMapper;
+
     /**
      * sessionId → GPT WebSocket 연결 매핑
      * 각 사용자별로 독립적인 GPT 연결 유지
@@ -81,10 +87,9 @@ public class GptSessionManager {
      * 4. 시나리오 프롬프트 전송
      *
      * @param sessionId 대화 세션 ID
-     * @param prompt 시나리오 프롬프트
      * @param responseHandler GPT 응답을 처리할 핸들러
      */
-    public void createGptSession(String sessionId, String prompt, GptResponseHandler responseHandler) {
+    public void createGptSession(String sessionId, AudioFormat audioFormat, RealtimeSession aiSession, GptResponseHandler responseHandler) {
         try {
             log.info("GPT 세션 생성 시작 - sessionId: {},", sessionId);
 
@@ -100,12 +105,6 @@ public class GptSessionManager {
                 public void afterConnectionEstablished(WebSocketSession session) {
                     log.info("GPT WebSocket 연결 성공 - sessionId: {}", sessionId);
                     gptSessions.put(sessionId, session);
-
-                    try {
-                        session.sendMessage(new TextMessage(prompt));
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
 
                 }
 
@@ -145,6 +144,22 @@ public class GptSessionManager {
                         public void afterConnectionEstablished(WebSocketSession session) {
                             log.info("GPT WebSocket 연결 성공 - sessionId: {}", sessionId);
                             gptSessions.put(sessionId, session);
+
+                            SessionInitMessage message = SessionInitMessage.makePrompt(aiSession, audioFormat);
+                            String prompt;
+
+                            try {
+                                prompt = objectMapper.writeValueAsString(message);
+                            } catch (JsonProcessingException e) {
+                                throw new RuntimeException(e);
+                            }
+
+                            try {
+                                session.sendMessage(new TextMessage(prompt));
+                                log.info("프롬프트 전달 성공 - sessionId: {}, prompt: {}", sessionId, prompt);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
                         }
 
                         @Override
