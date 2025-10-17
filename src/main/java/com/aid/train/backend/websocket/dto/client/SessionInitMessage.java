@@ -2,6 +2,7 @@ package com.aid.train.backend.websocket.dto.client;
 
 import com.aid.train.backend.domain.scenario.entity.Scenario;
 import com.aid.train.backend.websocket.dto.common.AudioFormat;
+import com.aid.train.backend.websocket.dto.server.RealtimeSession;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
@@ -31,28 +32,19 @@ import lombok.*;
 @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class SessionInitMessage {
-    /** Scenario.id */
-    private Long scenarioId;
-    /** 초기 프롬프트(선택) */
-    private String prompt;
-    /** 로케일 코드(예: "ko-KR") */
-    private String locale;
-    /** AI 보이스 프리셋 키(선택) */
-    private String voice;
-    /** 입력 오디오 캡처 포맷 */
-    private AudioFormat audioFormat;
 
     @Builder.Default
-    private MessageType type = MessageType.SESSION_INIT;
+    private String type = "session.update";
+
+    private RealtimeSession session;
+
+    private AudioFormat audioFormat;
 
 
     // gpt 프롬프트 생성 편의 메소드
-    public static SessionInitMessage fromEntity(Scenario scenario, AudioFormat audioFormat) {
+    public static SessionInitMessage makePrompt(RealtimeSession session, AudioFormat audioFormat) {
         return SessionInitMessage.builder()
-                .scenarioId(scenario.getId())
-                .prompt(scenario.getPrompt())
-                .locale(scenario.getLocale())
-                .voice(scenario.getVoice().name())
+                .session(session)
                 .audioFormat(audioFormat)
                 .build();
     }

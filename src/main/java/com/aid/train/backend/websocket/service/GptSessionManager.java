@@ -11,6 +11,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -83,9 +84,9 @@ public class GptSessionManager {
      * @param prompt 시나리오 프롬프트
      * @param responseHandler GPT 응답을 처리할 핸들러
      */
-    public void createGptSession(String sessionId, SessionInitMessage prompt, GptResponseHandler responseHandler) {
+    public void createGptSession(String sessionId, String prompt, GptResponseHandler responseHandler) {
         try {
-            log.info("GPT 세션 생성 시작 - sessionId: {}, voice: {}", sessionId, prompt.getVoice());
+            log.info("GPT 세션 생성 시작 - sessionId: {},", sessionId);
 
             // 1. WebSocket 클라이언트 생성
             StandardWebSocketClient client = new StandardWebSocketClient();
@@ -99,6 +100,12 @@ public class GptSessionManager {
                 public void afterConnectionEstablished(WebSocketSession session) {
                     log.info("GPT WebSocket 연결 성공 - sessionId: {}", sessionId);
                     gptSessions.put(sessionId, session);
+
+                    try {
+                        session.sendMessage(new TextMessage(prompt));
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
 
                 }
 

@@ -6,7 +6,9 @@ import com.aid.train.backend.domain.scenario.repository.ScenarioRepository;
 import com.aid.train.backend.domain.session.entity.DialogueSession;
 import com.aid.train.backend.websocket.dto.client.SessionInitMessage;
 import com.aid.train.backend.websocket.dto.common.AudioFormat;
+import com.aid.train.backend.websocket.dto.server.RealtimeSession;
 import com.aid.train.backend.websocket.model.GptSession;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +51,7 @@ public class SessionCoordinator {
 
     private final ScenarioRepository scenarioRepository;
 
+    private final ObjectMapper objectMapper;
 
     private final Map<String, GptSession> gptSessionMap = new ConcurrentHashMap<>();
 
@@ -85,19 +88,51 @@ public class SessionCoordinator {
             String voice = dialogueSession.getScenario().getVoice().name().toLowerCase();*/
             Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow();
             log.info("시나리오 조회 성공: {}", scenario.getTitle());
-            
+
+            String instructions =
+                    """
+                    당신은 역할극 대화 파트너입니다. 사용자의 대화 연습을 도와주는 것이 목적입니다.
+                    다음 시나리오 정보를 기반으로 대화를 진행하세요.
+                
+                    - 난이도: %s
+                    - 카테고리: %s
+                    - 대화 주제: %s
+                    - 시나리오 설명: %s
+                
+                    아래의 지침을 따르세요:
+                    1. 사용자의 실력을 고려해 난이도에 맞는 어휘와 문장을 사용하세요.
+                    2. 카테고리에 맞는 상황 설정과 맥락을 유지하세요.
+                    3. 대화가 자연스럽게 이어지도록 짧은 문장으로 응답하세요.
+                    4. 반드시 한국어(%s)로 대화하세요.
+                    """.formatted(
+                            scenario.getDifficulty(),
+                            scenario.getCategory(),
+                            scenario.getTitle(),
+                            scenario.getDescription(),
+                            scenario.getLocale()
+                    );
+
             AudioFormat audioFormat = AudioFormat.builder()
                     .sampleRate(48000)   // 서버에서 기본값
                     .channels(1)     // mono
                     .encoding("pcm16")   // PCM 16-bit
                     .build();
 
-            SessionInitMessage initMessage = SessionInitMessage.fromEntity(scenario, audioFormat);
+            RealtimeSession session = RealtimeSession.builder()
+                    .type("realtime")
+                    .model("gpt-4o-realtime-preview-2025-10-15")
+                    .instructions(instructions)
+                    .voice(scenario.getVoice().name())
+                    .locale(scenario.getLocale())
+                    .build();
+
+            SessionInitMessage message = SessionInitMessage.makePrompt(session, audioFormat);
+            String prompt = objectMapper.writeValueAsString(message);
 
             // 4. GPT Realtime API 연결
             gptSessionManager.createGptSession(
                     sessionId,
-                    initMessage,
+                    prompt,
                     this::handleGptResponse
             );
 
