@@ -124,7 +124,7 @@ public class SessionCoordinator {
                     .locale(scenario.getLocale())
                     .build();
 
-            SessionInitMessage message = SessionInitMessage.makePrompt(session, audioFormat);
+            SessionInitMessage message = SessionInitMessage.makePrompt(session);
 
             GptSession gptSession = GptSession.builder()
                     .sessionId(sessionId)
@@ -147,6 +147,10 @@ public class SessionCoordinator {
                         gptSessionManager.sendAudioToGpt(sessionId, chunk);
                     }
                 }
+            })
+            .exceptionally(ex -> {
+               log.error("GPT 세션 생성 실패", ex);
+               return null;
             });
 
 

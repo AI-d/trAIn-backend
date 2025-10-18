@@ -17,6 +17,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class GptSession {
 
     private String sessionId;
+
+    @Builder.Default
     private AtomicBoolean isReady = new AtomicBoolean(false);
 
     private Object gptRealtimeSession;// 실제 GPT Realtime API 세션 객체

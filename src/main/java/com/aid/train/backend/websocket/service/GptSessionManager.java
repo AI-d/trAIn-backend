@@ -89,8 +89,7 @@ public class GptSessionManager {
      * @param sessionId 대화 세션 ID
      * @param responseHandler GPT 응답을 처리할 핸들러
      */
-    public CompletableFuture<Void> createGptSession(String sessionId, SessionInitMessage message, GptResponseHandler responseHandler) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
+    public CompletableFuture<WebSocketSession> createGptSession(String sessionId, SessionInitMessage message, GptResponseHandler responseHandler) {
 
         try {
             log.info("GPT 세션 생성 시작 - sessionId: {},", sessionId);
@@ -137,10 +136,12 @@ public class GptSessionManager {
             headers.add("Authorization", "Bearer " + openAiApiKey);
             headers.add("OpenAI-Beta", "realtime=v1");
 
-            log.debug("API Key 사용: {}...", openAiApiKey.substring(0, 20));
+            log.debug("API Key 사용");
 
             URI uri = new URI("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-10-15");
+
             CompletableFuture<WebSocketSession> future = client.execute(
+
                     new TextWebSocketHandler() {
                         @Override
                         public void afterConnectionEstablished(WebSocketSession session) {
@@ -155,11 +156,28 @@ public class GptSessionManager {
                             log.debug("GPT 응답 수신 - sessionId: {}, payload: {}", sessionId, payload);
 
                             // 여기서 프롬프트 전송
+                            try {
+                                Map<String, Object> json = objectMapper.readValue(payload, Map.class);
+                                String type = (String) json.get("type");
 
+                                // 세션 생성 완료 이벤트 감지 -> 프롬프트 전송
+                                if ("session.created".equals(type)) {
+                                    log.info("GPT 세션 초기화 완료 - 프롬프트 전송 시작");
 
-                            GptResponseHandler handler = responseHandlers.get(sessionId);
-                            if (handler != null) {
-                                handler.handleGptResponse(sessionId, message.getPayload());
+                                    String prompt = objectMapper.writeValueAsString(message);
+                                    session.sendMessage(new TextMessage(prompt));
+
+                                    log.info("GPT 시나리오 전송 완료 - sessionId: {}", sessionId);
+                                    return;
+                                }
+
+                                GptResponseHandler handler = responseHandlers.get(sessionId);
+                                if (handler != null) {
+                                    handler.handleGptResponse(sessionId, message.getPayload());
+                                }
+
+                            } catch (Exception e) {
+                                log.error("GPT 메시지 처리 중 오류 - sessionId: {}", sessionId, e);
                             }
                         }
 
@@ -181,6 +199,7 @@ public class GptSessionManager {
                 }
             });
 
+            return future;
 
         } catch (Exception e) {
             log.error("GPT 세션 생성 실패 - sessionId: {}", sessionId, e);
