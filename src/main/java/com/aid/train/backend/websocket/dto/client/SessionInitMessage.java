@@ -46,6 +46,5 @@ public class SessionInitMessage {
         return SessionInitMessage.builder()
                 .session(session)
                 //.audioFormat(audioFormat)
-                .build();
-    }
+    private AudioFormat audioFormat;
 }
