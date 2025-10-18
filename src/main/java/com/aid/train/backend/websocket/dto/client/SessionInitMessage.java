@@ -38,14 +38,13 @@ public class SessionInitMessage {
 
     private RealtimeSession session;
 
-    private AudioFormat audioFormat;
+    // private AudioFormat audioFormat;
 
 
     // gpt 프롬프트 생성 편의 메소드
-    public static SessionInitMessage makePrompt(RealtimeSession session, AudioFormat audioFormat) {
+    public static SessionInitMessage makePrompt(RealtimeSession session) {
         return SessionInitMessage.builder()
                 .session(session)
-                .audioFormat(audioFormat)
-                .build();
-    }
+                //.audioFormat(audioFormat)
+    private AudioFormat audioFormat;
 }

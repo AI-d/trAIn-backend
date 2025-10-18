@@ -1,13 +1,12 @@
 package com.aid.train.backend.websocket.service;
 
-import com.aid.train.backend.domain.scenario.dto.response.ScenarioResponseDto;
 import com.aid.train.backend.domain.scenario.entity.Scenario;
 import com.aid.train.backend.domain.scenario.repository.ScenarioRepository;
 import com.aid.train.backend.domain.session.entity.DialogueSession;
 import com.aid.train.backend.websocket.dto.client.SessionInitMessage;
 import com.aid.train.backend.websocket.dto.common.AudioFormat;
 import com.aid.train.backend.websocket.dto.server.RealtimeSession;
-import com.aid.train.backend.websocket.model.GptSession;
+import com.aid.train.backend.websocket.dto.server.GptSession;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -125,22 +124,36 @@ public class SessionCoordinator {
                     .locale(scenario.getLocale())
                     .build();
 
+            SessionInitMessage message = SessionInitMessage.makePrompt(session);
+
+            GptSession gptSession = GptSession.builder()
+                    .sessionId(sessionId)
+                    .build();
+
+            gptSessionMap.put(sessionId, gptSession);
+
             // 4. GPT Realtime API 연결
             gptSessionManager.createGptSession(
                     sessionId,
-                    audioFormat,
-                    session,
+                    message,
                     this::handleGptResponse
-            );
-
-            GptSession gptSession = gptSessionMap.get(sessionId);
-            if (gptSession != null) {
-                Queue<byte[]> queue = gptSession.getAudioQueue();
-                while (!queue.isEmpty()) {
-                    byte[] chunk = queue.poll();
-                    gptSessionManager.sendAudioToGpt(sessionId, chunk);
+            ).thenAccept((v) -> {
+                GptSession gSession = gptSessionMap.get(sessionId);
+                if (gSession != null) {
+                    gSession .setReady(true);
+                    Queue<byte[]> queue = gSession.getAudioQueue();
+                    while (!queue.isEmpty()) {
+                        byte[] chunk = queue.poll();
+                        gptSessionManager.sendAudioToGpt(sessionId, chunk);
+                    }
                 }
-            }
+            })
+            .exceptionally(ex -> {
+               log.error("GPT 세션 생성 실패", ex);
+               return null;
+            });
+
+
 
             // 5. WebRTC 상태 초기화
             webRtcStateManager.initializeState(sessionId);
