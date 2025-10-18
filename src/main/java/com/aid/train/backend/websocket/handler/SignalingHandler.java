@@ -278,4 +278,5 @@ public class SignalingHandler extends TextWebSocketHandler {
         String[] parts = path.split("/");
         return parts[parts.length - 1];
     }
+
 }

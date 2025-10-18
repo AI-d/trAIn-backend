@@ -1,5 +1,10 @@
 package com.aid.train.backend.websocket.service;
 
+import com.aid.train.backend.websocket.dto.client.SessionInitMessage;
+import com.aid.train.backend.websocket.dto.common.AudioFormat;
+import com.aid.train.backend.websocket.dto.server.RealtimeSession;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,11 +15,13 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -52,6 +59,8 @@ public class GptSessionManager {
     @Value("${spring.ai.openai.api-key}")
     private String openAiApiKey;
 
+    private ObjectMapper objectMapper;
+
     /**
      * sessionId → GPT WebSocket 연결 매핑
      * 각 사용자별로 독립적인 GPT 연결 유지
@@ -78,28 +87,17 @@ public class GptSessionManager {
      * 4. 시나리오 프롬프트 전송
      *
      * @param sessionId 대화 세션 ID
-     * @param prompt 시나리오 프롬프트
-     * @param voice GPT 음성 (onyx, echo, nova)
      * @param responseHandler GPT 응답을 처리할 핸들러
      */
-    public void createGptSession(String sessionId, String prompt,
-                                 String voice, GptResponseHandler responseHandler) {
+    public void createGptSession(String sessionId, AudioFormat audioFormat, RealtimeSession aiSession, GptResponseHandler responseHandler) {
         try {
-            log.info("GPT 세션 생성 시작 - sessionId: {}, voice: {}", sessionId, voice);
+            log.info("GPT 세션 생성 시작 - sessionId: {},", sessionId);
 
             // 1. WebSocket 클라이언트 생성
             StandardWebSocketClient client = new StandardWebSocketClient();
 
             // 2. GPT 응답 핸들러 등록
             responseHandlers.put(sessionId, responseHandler);
-
-            // URL에 모든 설정값(모델, 음성, 프롬프트)을 포함하여 동적으로 생성
-            String instructions = URLEncoder.encode(prompt, StandardCharsets.UTF_8);
-            String gptRealtimeUrl = String.format(
-                    "wss://api.openai.com/v1/realtime?model=gpt-realtime-2025-08-28",
-                    voice.toLowerCase(),
-                    instructions
-            );
 
             // 3. GPT WebSocket 핸들러 생성
             TextWebSocketHandler handler = new TextWebSocketHandler() {
@@ -114,7 +112,6 @@ public class GptSessionManager {
                 protected void handleTextMessage(WebSocketSession session, TextMessage message) {
                     // GPT 응답 수신 → responseHandler로 전달
                     String payload = message.getPayload();
-                    log.debug("GPT 응답 수신 (전체) - sessionId: {}, payload: {}", sessionId, payload);
 
                     GptResponseHandler handler = responseHandlers.get(sessionId);
                     if (handler != null) {
@@ -140,12 +137,63 @@ public class GptSessionManager {
 
             log.debug("API Key 사용: {}...", openAiApiKey.substring(0, 20));
 
-            client.execute(handler, headers, URI.create(gptRealtimeUrl));
+            URI uri = new URI("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-10-15");
+            CompletableFuture<WebSocketSession> future = client.execute(
+                    new TextWebSocketHandler() {
+                        @Override
+                        public void afterConnectionEstablished(WebSocketSession session) {
+                            log.info("GPT WebSocket 연결 성공 - sessionId: {}", sessionId);
+                            gptSessions.put(sessionId, session);
+
+                            SessionInitMessage message = SessionInitMessage.makePrompt(aiSession, audioFormat);
+                            String prompt;
+
+                            try {
+                                prompt = objectMapper.writeValueAsString(message);
+                            } catch (JsonProcessingException e) {
+                                throw new RuntimeException(e);
+                            }
+
+                            try {
+                                session.sendMessage(new TextMessage(prompt));
+                                log.info("프롬프트 전달 성공 - sessionId: {}, prompt: {}", sessionId, prompt);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+
+                        @Override
+                        protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+                            GptResponseHandler handler = responseHandlers.get(sessionId);
+                            if (handler != null) {
+                                handler.handleGptResponse(sessionId, message.getPayload());
+                            }
+                        }
+
+                        @Override
+                        public void handleTransportError(WebSocketSession session, Throwable exception) {
+                            log.error("GPT WebSocket 에러 - sessionId: {}", sessionId, exception);
+                        }
+                    },
+                    headers, // WebSocketHttpHeaders
+                    uri      // 연결할 URI
+            );
+
+            // 연결 성공/실패 로그
+            future.whenComplete((session, ex) -> {
+                if (ex != null) {
+                    log.error("GPT WebSocket handshake 실패 - sessionId: {}", sessionId, ex);
+                } else {
+                    log.info("GPT WebSocket handshake 성공 - sessionId: {}", sessionId);
+                }
+            });
+
 
         } catch (Exception e) {
             log.error("GPT 세션 생성 실패 - sessionId: {}", sessionId, e);
             throw new RuntimeException("GPT 세션 생성 실패: " + e.getMessage(), e);
         }
+
     }
 
     /**
