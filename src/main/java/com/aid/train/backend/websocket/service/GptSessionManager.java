@@ -59,7 +59,7 @@ public class GptSessionManager {
     @Value("${spring.ai.openai.api-key}")
     private String openAiApiKey;
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     /**
      * sessionId → GPT WebSocket 연결 매핑
@@ -89,7 +89,9 @@ public class GptSessionManager {
      * @param sessionId 대화 세션 ID
      * @param responseHandler GPT 응답을 처리할 핸들러
      */
-    public void createGptSession(String sessionId, SessionInitMessage message, GptResponseHandler responseHandler) {
+    public CompletableFuture<Void> createGptSession(String sessionId, SessionInitMessage message, GptResponseHandler responseHandler) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+
         try {
             log.info("GPT 세션 생성 시작 - sessionId: {},", sessionId);
 
@@ -100,7 +102,7 @@ public class GptSessionManager {
             responseHandlers.put(sessionId, responseHandler);
 
             // 3. GPT WebSocket 핸들러 생성
-            TextWebSocketHandler handler = new TextWebSocketHandler() {
+            /*TextWebSocketHandler handler = new TextWebSocketHandler() {
                 @Override
                 public void afterConnectionEstablished(WebSocketSession session) {
                     log.info("GPT WebSocket 연결 성공 - sessionId: {}", sessionId);
@@ -123,7 +125,7 @@ public class GptSessionManager {
                 public void handleTransportError(WebSocketSession session, Throwable exception) {
                     log.error("GPT WebSocket 에러 - sessionId: {}", sessionId, exception);
                 }
-            };
+            };*/
 
             // 4. GPT API에 WebSocket 연결 (Authorization 헤더 포함)
             // GPT Realtime API는 URL에 파라미터로 인증 정보 전달
@@ -145,23 +147,6 @@ public class GptSessionManager {
                             log.info("GPT WebSocket 연결 성공 - sessionId: {}", sessionId);
                             gptSessions.put(sessionId, session);
 
-                            String prompt = null ;
-
-                            try {
-                                prompt = objectMapper.writeValueAsString(message);
-                                session.sendMessage(new TextMessage(prompt));
-                                log.info("GPT 시나리오 전송 - sessionId: {}", sessionId);
-
-                            } catch (JsonProcessingException e) {
-
-                                log.error("시나리오 JSON 변환 실패 - sessionId: {}", sessionId, e);
-                                throw new RuntimeException(e);
-                            } catch (IOException e) {
-
-                                log.error("GPT 메시지 전송 실패 - sessionId: {}", sessionId, e);
-                                throw new RuntimeException(e);
-                            }
-
                         }
 
                         @Override
@@ -169,6 +154,7 @@ public class GptSessionManager {
                             String payload = message.getPayload();
                             log.debug("GPT 응답 수신 - sessionId: {}, payload: {}", sessionId, payload);
 
+                            // 여기서 프롬프트 전송
 
 
                             GptResponseHandler handler = responseHandlers.get(sessionId);

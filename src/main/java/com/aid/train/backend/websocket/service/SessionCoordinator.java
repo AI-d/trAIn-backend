@@ -126,21 +126,30 @@ public class SessionCoordinator {
 
             SessionInitMessage message = SessionInitMessage.makePrompt(session, audioFormat);
 
+            GptSession gptSession = GptSession.builder()
+                    .sessionId(sessionId)
+                    .build();
+
+            gptSessionMap.put(sessionId, gptSession);
+
             // 4. GPT Realtime API 연결
             gptSessionManager.createGptSession(
                     sessionId,
                     message,
                     this::handleGptResponse
-            );
-
-            GptSession gptSession = gptSessionMap.get(sessionId);
-            if (gptSession != null) {
-                Queue<byte[]> queue = gptSession.getAudioQueue();
-                while (!queue.isEmpty()) {
-                    byte[] chunk = queue.poll();
-                    gptSessionManager.sendAudioToGpt(sessionId, chunk);
+            ).thenAccept((v) -> {
+                GptSession gSession = gptSessionMap.get(sessionId);
+                if (gSession != null) {
+                    gSession .setReady(true);
+                    Queue<byte[]> queue = gSession.getAudioQueue();
+                    while (!queue.isEmpty()) {
+                        byte[] chunk = queue.poll();
+                        gptSessionManager.sendAudioToGpt(sessionId, chunk);
+                    }
                 }
-            }
+            });
+
+
 
             // 5. WebRTC 상태 초기화
             webRtcStateManager.initializeState(sessionId);
