@@ -45,6 +45,6 @@ public class SessionInitMessage {
     public static SessionInitMessage makePrompt(RealtimeSession session) {
         return SessionInitMessage.builder()
                 .session(session)
-                //.audioFormat(audioFormat)
-    private AudioFormat audioFormat;
+                .build();
+    }
 }

@@ -4,6 +4,7 @@ import com.aid.train.backend.websocket.dto.client.SessionInitMessage;
 import com.aid.train.backend.websocket.dto.common.AudioFormat;
 import com.aid.train.backend.websocket.dto.server.RealtimeSession;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -89,7 +90,7 @@ public class GptSessionManager {
      * @param sessionId 대화 세션 ID
      * @param responseHandler GPT 응답을 처리할 핸들러
      */
-    public CompletableFuture<WebSocketSession> createGptSession(String sessionId, SessionInitMessage message, GptResponseHandler responseHandler) {
+    public CompletableFuture<WebSocketSession> createGptSession(String sessionId, SessionInitMessage initMessage, GptResponseHandler responseHandler) {
 
         try {
             log.info("GPT 세션 생성 시작 - sessionId: {},", sessionId);
@@ -138,7 +139,7 @@ public class GptSessionManager {
 
             log.debug("API Key 사용");
 
-            URI uri = new URI("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-10-15");
+            URI uri = new URI("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01");
 
             CompletableFuture<WebSocketSession> future = client.execute(
 
@@ -157,14 +158,14 @@ public class GptSessionManager {
 
                             // 여기서 프롬프트 전송
                             try {
-                                Map<String, Object> json = objectMapper.readValue(payload, Map.class);
+                                Map<String, Object> json = objectMapper.readValue(payload, new TypeReference<Map<String, Object>>() {});
                                 String type = (String) json.get("type");
 
                                 // 세션 생성 완료 이벤트 감지 -> 프롬프트 전송
                                 if ("session.created".equals(type)) {
                                     log.info("GPT 세션 초기화 완료 - 프롬프트 전송 시작");
 
-                                    String prompt = objectMapper.writeValueAsString(message);
+                                    String prompt = objectMapper.writeValueAsString(initMessage);
                                     session.sendMessage(new TextMessage(prompt));
 
                                     log.info("GPT 시나리오 전송 완료 - sessionId: {}", sessionId);
