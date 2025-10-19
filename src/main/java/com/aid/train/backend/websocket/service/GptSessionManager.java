@@ -228,7 +228,7 @@ public class GptSessionManager {
     public void sendAudioToGpt(String sessionId, byte[] audioData) {
         try {
             // 1. 음성 데이터를 Base64로 인코딩
-            String base64Audio = Base64.getEncoder().encodeToString(audioData);
+            String base64Audio = Base64.getEncoder().encodeToString(audioData) ;
 
             // 2. GPT 메시지 생성
             String message = String.format("""
