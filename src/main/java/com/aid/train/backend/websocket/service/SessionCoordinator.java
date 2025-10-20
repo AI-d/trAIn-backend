@@ -121,7 +121,6 @@ public class SessionCoordinator {
                     .model("gpt-4o-realtime-preview-2025-10-15")
                     .instructions(instructions)
                     .voice(scenario.getVoice().name())
-                    .locale(scenario.getLocale())
                     .build();
 
             SessionInitMessage message = SessionInitMessage.makePrompt(session);
