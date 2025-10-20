@@ -2,8 +2,14 @@ package com.aid.train.backend.websocket.service;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.socket.WebSocketSession;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +34,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 public class WebRtcStateManager {
+
+    /**
+     * OpenAI API Key (환경변수에서 주입)
+     */
+    @Value("${spring.ai.openai.api-key}")
+    private String openAiApiKey;
 
     /**
      * WebRTC 연결 상태 정의
@@ -269,5 +281,42 @@ public class WebRtcStateManager {
         int count = states.size();
         states.clear();
         log.info("모든 WebRTC 상태 제거 완료 - 제거된 상태 수: {}", count);
+    }
+
+    public String connectToGptRealtime(String sessionId, String clientOfferSdp) {
+        try {
+            updateState(sessionId, State.CONNECTING);
+            log.info("connectToGptRealtime() 호출됨 - sessionId: {}", sessionId);
+            String gptUrl = "https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01";
+            HttpClient httpClient = HttpClient.newHttpClient();
+
+            // offer sdp -> gpt 전송
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(gptUrl))
+                    .header("Authorization", "Bearer " + openAiApiKey)
+                    .header("Content-type", "application/sdp")
+                    .POST(HttpRequest.BodyPublishers.ofString(clientOfferSdp))
+                    .build();
+
+            log.info("gpt에게 sdp 전송: {}", clientOfferSdp);
+
+            // gpt sdp -> 수신
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if(response.statusCode() / 100 != 2) {
+                log.error("gpt sdp 수신 에러 발생: {} - {}", response.statusCode(), response.body());
+                throw new RuntimeException("gpt webRtc 연결 실패");
+            }
+
+            String gptAnswerSdp = response.body();
+            log.info("gpt Answer sdp 수신 성공: {}", gptAnswerSdp);
+
+            updateState(sessionId, State.CONNECTED);
+            return gptAnswerSdp;
+
+        } catch (Exception e) {
+            log.error("gpt 연결 실패: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 }

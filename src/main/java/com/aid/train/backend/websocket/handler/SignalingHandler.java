@@ -140,10 +140,13 @@ public class SignalingHandler extends TextWebSocketHandler {
         // WebRTC 상태 업데이트
         webRtcStateManager.updateState(sessionId, WebRtcStateManager.State.CONNECTING);
 
+        // Gpt Realtime API 로 Offer 전송
+        String gptAnswerSdp = webRtcStateManager.connectToGptRealtime(sessionId, offer.getSdp());
+
         // TODO: 실제 WebRTC Answer 생성 로직
         // 현재는 Mock Answer 반환
         AnswerMessage answer = AnswerMessage.builder()
-                .sdp("v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\n")
+                .sdp(gptAnswerSdp)
                 .build();
 
         String answerJson = objectMapper.writeValueAsString(answer);
