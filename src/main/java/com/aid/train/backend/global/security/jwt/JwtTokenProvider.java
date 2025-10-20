@@ -1,260 +1,247 @@
 package com.aid.train.backend.global.security.jwt;
 
+import com.aid.train.backend.global.exception.TrainException;
+import com.aid.train.backend.global.exception.enums.ErrorCode;
+import com.aid.train.backend.global.properties.JwtProperties;
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureException;
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 
 /**
- * JWT 토큰 생성 및 검증을 담당하는 Provider 클래스입니다.
- * Access, Refresh, Email Verify, Password Reset 등 다양한 토큰 타입을 지원합니다.
+ * JWT(Json Web Token) 생성 및 검증을 담당하는 유틸리티 클래스입니다.
+ * <p>
+ * Access, Refresh, EmailVerification, SocialSignupPending 등 다양한 용도의 토큰을 생성하고,
+ * 서명 검증, 만료 여부 확인, 클레임 추출 등의 기능을 제공합니다.
+ * </p>
  *
  * @author 왕택준
+ * @see JwtProperties
  * @since 1.0.0
  */
-@Component
-@RequiredArgsConstructor
 @Slf4j
+@Component
 public class JwtTokenProvider {
 
-    private final JwtProperties jwtProperties;
-    private SecretKey secretKey;
+    // ===== JWT 클레임(Claim) 상수 =====
+    private static final String CLAIM_USER_ID = "userId";
+    private static final String CLAIM_EMAIL = "email";
+    private static final String CLAIM_TOKEN_TYPE = "type";
+    private static final String CLAIM_PROVIDER = "provider";
+    private static final String CLAIM_PROVIDER_ID = "providerId";
+    private static final String CLAIM_NAME = "name";
 
-    /**
-     * Bean 초기화 후 SecretKey 생성
-     */
-    @PostConstruct
-    void initKey() {
-        byte[] keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
-        if (keyBytes.length < 32) {
-            log.warn("JWT secret 길이가 256bit(32바이트) 미만입니다. 운영에서는 더 긴 키를 권장합니다.");
-        }
+    // ===== JWT 토큰 타입 상수 =====
+    private static final String TYPE_ACCESS = "ACCESS";
+    private static final String TYPE_REFRESH = "REFRESH";
+    private static final String TYPE_EMAIL_VERIFICATION = "EMAIL_VERIFICATION";
+    private static final String TYPE_SOCIAL_SIGNUP_PENDING = "SOCIAL_SIGNUP_PENDING";
+
+    private final JwtProperties jwtProperties;
+    private final SecretKey secretKey;
+
+    public JwtTokenProvider(JwtProperties jwtProperties) {
+        this.jwtProperties = jwtProperties;
+        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // ====================== 토큰 생성 메서드들 ======================
+    // ===== 토큰 생성 메서드 =====
 
     /**
-     * Access Token을 생성합니다.
+     * Access Token과 Refresh Token을 함께 생성합니다.
      *
      * @param userId 사용자 ID
      * @param email  사용자 이메일
-     * @return JWT Access Token
+     * @return 생성된 토큰 정보를 담은 JwtResponse 객체
+     */
+    public JwtResponse generateTokens(Long userId, String email) {
+        String accessToken = generateAccessToken(userId, email);
+        String refreshToken = generateRefreshToken(userId, email);
+        return new JwtResponse(accessToken, refreshToken);
+    }
+
+    /**
+     * Access Token (15분)을 생성합니다. API 인증에 사용됩니다.
+     *
+     * @param userId 사용자 ID
+     * @param email  사용자 이메일
+     * @return 생성된 Access Token
      */
     public String generateAccessToken(Long userId, String email) {
-        Instant now = Instant.now();
-        return Jwts.builder()
-                .subject(String.valueOf(userId))
-                .claim("email", email)
-                .claim("tokenType", "ACCESS")
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusMillis(jwtProperties.getAccessTokenValidity())))
-                .signWith(secretKey, Jwts.SIG.HS256)
-                .compact();
+        return generateToken(userId, email, TYPE_ACCESS, jwtProperties.getAccessTokenExpiration());
     }
 
     /**
-     * Refresh Token을 생성합니다.
+     * Refresh Token (14일)을 생성합니다. Access Token 갱신에 사용됩니다.
      *
      * @param userId 사용자 ID
-     * @return JWT Refresh Token
+     * @param email  사용자 이메일
+     * @return 생성된 Refresh Token
      */
-    public String generateRefreshToken(Long userId) {
-        Instant now = Instant.now();
-        return Jwts.builder()
-                .subject(String.valueOf(userId))
-                .claim("tokenType", "REFRESH")
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusMillis(jwtProperties.getRefreshTokenValidity())))
-                .signWith(secretKey, Jwts.SIG.HS256)
-                .compact();
+    public String generateRefreshToken(Long userId, String email) {
+        return generateToken(userId, email, TYPE_REFRESH, jwtProperties.getRefreshTokenExpiration());
     }
 
     /**
-     * 이메일 인증용 토큰을 생성합니다.
+     * 이메일 인증 토큰 (15분)을 생성합니다. 로컬 회원가입 시 이메일 인증 절차에 사용됩니다.
      *
      * @param userId 사용자 ID
-     * @param email  이메일
-     * @return JWT Email Verify Token
+     * @param email  인증할 이메일
+     * @return 생성된 Email Verification Token
      */
-    public String generateEmailVerifyToken(Long userId, String email) {
-        Instant now = Instant.now();
+    public String generateEmailVerificationToken(Long userId, String email) {
+        return generateToken(userId, email, TYPE_EMAIL_VERIFICATION, jwtProperties.getAccessTokenExpiration());
+    }
+
+    /**
+     * 소셜 회원가입 대기 토큰 (15분)을 생성합니다. 신규 소셜 사용자의 추가 정보 입력을 위해 사용됩니다.
+     *
+     * @param provider   소셜 제공자 이름 (e.g., "GOOGLE")
+     * @param providerId 소셜 플랫폼 사용자 ID
+     * @param email      소셜 이메일
+     * @param name       소셜 사용자 이름
+     * @return 생성된 Social Signup Pending Token
+     */
+    public String generateSocialSignupPendingToken(String provider, String providerId, String email, String name) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtProperties.getAccessTokenExpiration()); // Access Token과 동일한 15분 만료
+
         return Jwts.builder()
-                .subject(String.valueOf(userId))
-                .claim("email", email)
-                .claim("tokenType", "EMAIL_VERIFY")
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusMillis(1800000))) // 30분
-                .signWith(secretKey, Jwts.SIG.HS256)
+                .claim(CLAIM_PROVIDER, provider)
+                .claim(CLAIM_PROVIDER_ID, providerId)
+                .claim(CLAIM_EMAIL, email)
+                .claim(CLAIM_NAME, name)
+                .claim(CLAIM_TOKEN_TYPE, TYPE_SOCIAL_SIGNUP_PENDING)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(secretKey, SignatureAlgorithm.HS512)
                 .compact();
     }
 
-    /**
-     * 비밀번호 재설정용 토큰을 생성합니다.
-     *
-     * @param userId 사용자 ID
-     * @param email  이메일
-     * @return JWT Password Reset Token
-     */
-    public String generatePasswordResetToken(Long userId, String email) {
-        Instant now = Instant.now();
-        return Jwts.builder()
-                .subject(String.valueOf(userId))
-                .claim("email", email)
-                .claim("tokenType", "PASSWORD_RESET")
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusMillis(3600000))) // 1시간
-                .signWith(secretKey, Jwts.SIG.HS256)
-                .compact();
-    }
-
-    // ====================== 토큰 파싱 및 검증 메서드들 ======================
+    // ===== 토큰 검증 메서드 =====
 
     /**
-     * JWT 토큰 파싱 및 Claims 추출
-     * ±60초 시계 오차를 허용합니다.
+     * 토큰의 유효성을 검증합니다. 서명, 만료 시간, 형식 등을 확인합니다.
      *
-     * @param token 파싱할 JWT 토큰
-     * @return 토큰의 Claims 객체
-     */
-    public Claims parseClaims(String token) {
-        try {
-            return Jwts.parser()
-                    .verifyWith(secretKey)
-                    .clockSkewSeconds(60)  // ±60초 시계 오차 허용
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
-        } catch (ExpiredJwtException e) {
-            log.warn("JWT expired: {}", e.getMessage());
-            throw e;
-        } catch (UnsupportedJwtException e) {
-            log.warn("JWT unsupported: {}", e.getMessage());
-            throw e;
-        } catch (MalformedJwtException e) {
-            log.warn("JWT malformed: {}", e.getMessage());
-            throw e;
-        } catch (SignatureException e) {
-            log.warn("JWT bad signature");
-            throw e;
-        } catch (IllegalArgumentException e) {
-            log.warn("JWT illegal argument");
-            throw e;
-        }
-    }
-
-    /**
-     * JWT 토큰에서 사용자 ID를 추출합니다.
-     *
-     * @param token JWT 토큰
-     * @return 사용자 ID
-     */
-    public Long getUserIdFromToken(String token) {
-        Claims claims = parseClaims(token);
-        return Long.parseLong(claims.getSubject());
-    }
-
-    /**
-     * JWT 토큰에서 이메일을 추출합니다.
-     *
-     * @param token JWT 토큰
-     * @return 이메일
-     */
-    public String getEmailFromToken(String token) {
-        Claims claims = parseClaims(token);
-        return claims.get("email", String.class);
-    }
-
-    /**
-     * JWT 토큰의 유효성을 검증합니다.
-     *
-     * @param token JWT 토큰
-     * @return 유효하면 true, 아니면 false
+     * @param token 검증할 JWT
+     * @return 유효하면 true
+     * @throws TrainException 유효하지 않은 경우 (서명 오류, 만료, 형식 오류 등)
      */
     public boolean validateToken(String token) {
         try {
-            parseClaims(token);
+            Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token);
             return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            log.warn("validateToken failed: {}", e.getClass().getSimpleName());
-            return false;
+        } catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
+            log.warn("잘못된 JWT 서명입니다. Token: {}", token, e);
+            throw new TrainException(ErrorCode.TOKEN_INVALID_SIGNATURE);
+        } catch (ExpiredJwtException e) {
+            log.warn("만료된 JWT 토큰입니다. Token: {}", token, e);
+            throw new TrainException(ErrorCode.TOKEN_EXPIRED);
+        } catch (UnsupportedJwtException e) {
+            log.warn("지원되지 않는 JWT 토큰입니다. Token: {}", token, e);
+            throw new TrainException(ErrorCode.TOKEN_UNSUPPORTED);
+        } catch (IllegalArgumentException e) {
+            log.warn("JWT 토큰이 잘못되었습니다. Token: {}", token, e);
+            throw new TrainException(ErrorCode.TOKEN_INVALID);
         }
     }
 
+    // ===== 클레임 추출 메서드 =====
+
     /**
-     * Access Token 타입 검증
-     *
-     * @param token 검증할 토큰
-     * @return Access Token이면 true
+     * 토큰에서 사용자 ID를 추출합니다.
      */
-    public boolean isAccessToken(String token) {
-        return "ACCESS".equals(String.valueOf(parseClaims(token).get("tokenType")));
+    public Long getUserIdFromToken(String token) {
+        return getClaims(token).get(CLAIM_USER_ID, Long.class);
     }
 
     /**
-     * Refresh Token 타입 검증
-     *
-     * @param token 검증할 토큰
-     * @return Refresh Token이면 true
+     * 토큰에서 이메일을 추출합니다.
      */
-    public boolean isRefreshToken(String token) {
-        return "REFRESH".equals(String.valueOf(parseClaims(token).get("tokenType")));
+    public String getEmailFromToken(String token) {
+        return getClaims(token).get(CLAIM_EMAIL, String.class);
     }
 
     /**
-     * Email Verify Token 타입 검증
-     *
-     * @param token 검증할 토큰
-     * @return Email Verify Token이면 true
+     * 토큰에서 소셜 제공자 이름을 추출합니다.
      */
-    public boolean isEmailVerifyToken(String token) {
-        return "EMAIL_VERIFY".equals(String.valueOf(parseClaims(token).get("tokenType")));
+    public String getProviderFromToken(String token) {
+        return getClaims(token).get(CLAIM_PROVIDER, String.class);
     }
 
     /**
-     * Password Reset Token 타입 검증
-     *
-     * @param token 검증할 토큰
-     * @return Password Reset Token이면 true
+     * 토큰에서 소셜 제공자 ID를 추출합니다.
      */
-    public boolean isPasswordResetToken(String token) {
-        return "PASSWORD_RESET".equals(String.valueOf(parseClaims(token).get("tokenType")));
+    public String getProviderIdFromToken(String token) {
+        return getClaims(token).get(CLAIM_PROVIDER_ID, String.class);
     }
 
     /**
-     * JWT 토큰의 만료 시간을 반환합니다.
-     *
-     * @param token JWT 토큰
-     * @return 만료 시간
+     * 토큰에서 사용자 이름을 추출합니다.
      */
-    public Date getExpirationFromToken(String token) {
-        Claims claims = parseClaims(token);
-        return claims.getExpiration();
+    public String getNameFromToken(String token) {
+        return getClaims(token).get(CLAIM_NAME, String.class);
     }
 
     /**
-     * Access Token 만료 시간을 초 단위로 반환
-     *
-     * @return Access Token 만료 시간 (초)
+     * 토큰에서 만료 일시를 LocalDateTime으로 추출합니다.
      */
-    public int getAccessMaxAge() {
-        return Math.toIntExact(jwtProperties.getAccessTokenValidity() / 1000L);
+    public LocalDateTime getExpiryDateTimeFromToken(String token) {
+        Date expiryDate = getClaims(token).getExpiration();
+        return Instant.ofEpochMilli(expiryDate.getTime())
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
     }
 
     /**
-     * Refresh Token 만료 시간을 초 단위로 반환
-     *
-     * @return Refresh Token 만료 시간 (초)
+     * 토큰에서 모든 클레임을 추출합니다.
      */
-    public int getRefreshMaxAge() {
-        return Math.toIntExact(jwtProperties.getRefreshTokenValidity() / 1000L);
+    private Claims getClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    // ===== 내부 토큰 생성 로직 =====
+
+    private String generateToken(Long userId, String email, String tokenType, long validityInMilliseconds) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + validityInMilliseconds);
+
+        return Jwts.builder()
+                .claim(CLAIM_USER_ID, userId)
+                .claim(CLAIM_EMAIL, email)
+                .claim(CLAIM_TOKEN_TYPE, tokenType)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(secretKey, SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    // ===== 내부 DTO 클래스 =====
+
+    /**
+     * Access Token과 Refresh Token을 담는 내부 DTO 클래스입니다.
+     */
+    @Getter
+    public static class JwtResponse {
+        private final String accessToken;
+        private final String refreshToken;
+
+        public JwtResponse(String accessToken, String refreshToken) {
+            this.accessToken = accessToken;
+            this.refreshToken = refreshToken;
+        }
     }
 }
