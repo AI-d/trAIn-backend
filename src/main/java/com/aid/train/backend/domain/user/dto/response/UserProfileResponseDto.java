@@ -1,10 +1,7 @@
 package com.aid.train.backend.domain.user.dto.response;
 
-import com.aid.train.backend.domain.user.entity.User;
 import com.aid.train.backend.domain.user.enums.JobType;
 import com.aid.train.backend.domain.user.enums.Provider;
-import com.aid.train.backend.domain.user.enums.UserStatus;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,82 +13,108 @@ import java.time.LocalDateTime;
 
 /**
  * 사용자 프로필 응답 DTO입니다.
- * 사용자의 상세 정보를 클라이언트에 전달합니다.
+ * <p>
+ * 사용자 프로필 조회 및 수정 시 사용되는 응답 정보를 담습니다.
+ * 로그인한 사용자 본인의 프로필만 조회 및 수정할 수 있습니다.
+ * </p>
  *
  * @author 왕택준
  * @since 1.0.0
  */
+@Schema(description = "사용자 프로필 응답")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Schema(description = "사용자 프로필 응답")
 public class UserProfileResponseDto {
 
+    /**
+     * 사용자 ID
+     * <p>
+     * 사용자의 고유 식별자입니다.
+     * </p>
+     */
     @Schema(description = "사용자 ID", example = "1")
-    private Long id;
+    private Long userId;
 
-    @Schema(description = "이메일", example = "user@example.com")
+    /**
+     * 이메일 주소
+     * <p>
+     * 사용자의 이메일 주소입니다.
+     * 이메일은 수정할 수 없습니다.
+     * </p>
+     */
+    @Schema(description = "이메일 주소", example = "user@example.com")
     private String email;
 
-    @Schema(description = "이름", example = "홍길동")
+    /**
+     * 사용자 이름
+     * <p>
+     * 사용자의 이름입니다.
+     * 프로필 수정 시 변경 가능합니다.
+     * </p>
+     */
+    @Schema(description = "사용자 이름", example = "홍길동")
     private String name;
 
-    @Schema(description = "생년월일", example = "1998-08-07")
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    /**
+     * 생년월일
+     * <p>
+     * 사용자의 생년월일입니다.
+     * 프로필 수정 시 변경 가능합니다.
+     * </p>
+     */
+    @Schema(description = "생년월일", example = "1990-01-01")
     private LocalDate birthDate;
 
-    @Schema(description = "만 나이", example = "26")
-    private Integer age;
-
+    /**
+     * 직업 유형
+     * <p>
+     * 사용자의 직업 유형입니다.
+     * 프로필 수정 시 변경 가능합니다.
+     * </p>
+     */
     @Schema(description = "직업 유형", example = "EMPLOYEE")
     private JobType jobType;
 
-    @Schema(description = "기타 직업 상세", example = "프리랜서 개발자")
+    /**
+     * 직업 상세
+     * <p>
+     * 직업이 기타인 경우 입력한 직업 상세입니다.
+     * 프로필 수정 시 변경 가능합니다.
+     * </p>
+     */
+    @Schema(description = "직업 상세", example = "웹 디자이너")
     private String jobDetail;
 
-    @Schema(description = "주 인증 제공자", example = "LOCAL")
-    private Provider primaryProvider;
-
-    @Schema(description = "이메일 인증 완료 여부", example = "true")
-    private Boolean emailVerified;
-
-    @Schema(description = "계정 상태", example = "ACTIVE")
-    private UserStatus status;
-
-    @Schema(description = "마지막 로그인 시간", example = "2025-01-15T10:30:00")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime lastLoginAt;
-
-    @Schema(description = "계정 생성 일시", example = "2025-01-01T09:00:00")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime createdAt;
-
-    @Schema(description = "계정 수정 일시", example = "2025-01-15T10:30:00")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime updatedAt;
+    /**
+     * 가입 방법
+     * <p>
+     * 사용자의 가입 방법입니다.
+     * LOCAL: 이메일/비밀번호 회원가입
+     * GOOGLE, KAKAO, NAVER: 소셜 로그인
+     * </p>
+     */
+    @Schema(description = "가입 방법", example = "LOCAL")
+    private Provider provider;
 
     /**
-     * User 엔티티로부터 DTO를 생성합니다.
-     *
-     * @param user User 엔티티
-     * @return UserProfileResponseDto
+     * 이메일 인증 여부
+     * <p>
+     * 이메일 인증 완료 여부입니다.
+     * 로컬 회원가입: 이메일 인증 후 true
+     * 소셜 로그인: 자동으로 true
+     * </p>
      */
-    public static UserProfileResponseDto from(User user) {
-        return UserProfileResponseDto.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .name(user.getName())
-                .birthDate(user.getBirthDate())
-                .age(user.getAge())
-                .jobType(user.getJobType())
-                .jobDetail(user.getJobDetail())
-                .primaryProvider(user.getPrimaryProvider())
-                .emailVerified(user.getEmailVerified())
-                .status(user.getStatus())
-                .lastLoginAt(user.getLastLoginAt())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
-    }
+    @Schema(description = "이메일 인증 여부", example = "true")
+    private Boolean emailVerified;
+
+    /**
+     * 가입일시
+     * <p>
+     * 사용자가 회원가입한 일시입니다.
+     * </p>
+     */
+    @Schema(description = "가입일시", example = "2025-01-01T00:00:00")
+    private LocalDateTime createdAt;
 }

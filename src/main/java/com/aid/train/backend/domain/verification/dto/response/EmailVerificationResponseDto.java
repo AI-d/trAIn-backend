@@ -1,72 +1,55 @@
 package com.aid.train.backend.domain.verification.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 /**
  * 이메일 인증 응답 DTO입니다.
- * 이메일 인증 코드 발송 및 인증 결과를 반환합니다.
+ * <p>
+ * 이메일 인증 성공 또는 실패 시 반환되는 정보를 담습니다.
+ * 인증 성공 시 emailVerified=true로 변경되며, 이후 로그인이 가능합니다.
+ * </p>
  *
  * @author 왕택준
  * @since 1.0.0
  */
+@Schema(description = "이메일 인증 응답")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Schema(description = "이메일 인증 응답")
 public class EmailVerificationResponseDto {
 
+    /**
+     * 인증 성공 여부
+     * <p>
+     * 이메일 인증이 성공하면 true, 실패하면 false입니다.
+     * </p>
+     */
     @Schema(description = "인증 성공 여부", example = "true")
-    private Boolean isVerified;
+    private Boolean success;
 
-    @Schema(description = "이메일", example = "user@example.com")
-    private String email;
-
-    @Schema(description = "만료 시간 (분)", example = "10")
-    private Integer expiresInMinutes;
-
-    @Schema(description = "발송 시각")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime sentAt;
-
-    @Schema(description = "메시지", example = "인증 코드가 발송되었습니다.")
+    /**
+     * 안내 메시지
+     * <p>
+     * 사용자에게 표시할 안내 메시지입니다.
+     * 성공: "이메일 인증이 완료되었습니다."
+     * 실패: "유효하지 않은 인증 코드입니다.", "인증 토큰이 만료되었습니다." 등
+     * </p>
+     */
+    @Schema(description = "안내 메시지", example = "이메일 인증이 완료되었습니다.")
     private String message;
 
     /**
-     * 인증 코드 발송 응답을 생성합니다.
-     *
-     * @param email 이메일
-     * @param expiresInMinutes 만료 시간 (분)
-     * @return 발송 응답 DTO
+     * 이메일 인증 여부
+     * <p>
+     * 사용자의 최종 이메일 인증 상태입니다.
+     * 인증 성공 시 true로 변경됩니다.
+     * </p>
      */
-    public static EmailVerificationResponseDto ofSent(String email, Integer expiresInMinutes) {
-        return EmailVerificationResponseDto.builder()
-                .isVerified(false)
-                .email(email)
-                .expiresInMinutes(expiresInMinutes)
-                .sentAt(LocalDateTime.now())
-                .message("인증 코드가 발송되었습니다.")
-                .build();
-    }
-
-    /**
-     * 인증 성공 응답을 생성합니다.
-     *
-     * @param email 이메일
-     * @return 인증 성공 응답 DTO
-     */
-    public static EmailVerificationResponseDto ofVerified(String email) {
-        return EmailVerificationResponseDto.builder()
-                .isVerified(true)
-                .email(email)
-                .message("이메일 인증이 완료되었습니다.")
-                .build();
-    }
+    @Schema(description = "이메일 인증 여부", example = "true")
+    private Boolean emailVerified;
 }
