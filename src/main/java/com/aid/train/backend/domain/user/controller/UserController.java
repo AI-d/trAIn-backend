@@ -1,122 +1,110 @@
 package com.aid.train.backend.domain.user.controller;
 
-import com.aid.train.backend.domain.user.dto.request.ChangePasswordRequestDto;
-import com.aid.train.backend.domain.user.dto.request.UpdateProfileRequestDto;
+import com.aid.train.backend.domain.user.dto.request.LoginRequestDto;
+import com.aid.train.backend.domain.user.dto.request.PasswordChangeRequestDto;
+import com.aid.train.backend.domain.user.dto.request.ProfileUpdateRequestDto;
+import com.aid.train.backend.domain.user.dto.request.SignupRequestDto;
+import com.aid.train.backend.domain.user.dto.response.LoginResponseDto;
+import com.aid.train.backend.domain.user.dto.response.SignupResponseDto;
+import com.aid.train.backend.domain.user.dto.response.TokenRefreshResponseDto;
 import com.aid.train.backend.domain.user.dto.response.UserProfileResponseDto;
+import com.aid.train.backend.domain.user.service.AuthService;
 import com.aid.train.backend.domain.user.service.UserService;
+import com.aid.train.backend.global.exception.TrainException;
+import com.aid.train.backend.global.exception.enums.ErrorCode;
 import com.aid.train.backend.global.response.ApiResponse;
-import com.aid.train.backend.global.security.annotation.CurrentUserId;
+import com.aid.train.backend.global.security.dto.CustomUserDetails;
+import com.aid.train.backend.global.util.CookieUtil;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * 사용자 관리 API 컨트롤러입니다.
- * 프로필 조회/수정, 비밀번호 변경, 회원 탈퇴/복구 엔드포인트를 제공합니다.
- *
- * @author 왕택준
- * @since 1.0.0
- */
-@Tag(name = "04. 사용자 관리", description = "사용자 프로필 및 계정 관리 API")
+@Tag(name = "User & Auth", description = "사용자 회원가입, 로그인, 프로필 관리 API")
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-@Slf4j
 public class UserController {
 
     private final UserService userService;
+    private final AuthService authService;
+    private final CookieUtil cookieUtil;
 
-    /**
-     * 현재 로그인한 사용자의 프로필을 조회합니다.
-     *
-     * @param userId 현재 로그인한 사용자 ID
-     * @return 사용자 프로필 응답 DTO
-     */
-    @Operation(summary = "내 프로필 조회", description = "현재 로그인한 사용자의 프로필을 조회합니다.")
-    @GetMapping("/me")
-    public ApiResponse<UserProfileResponseDto> getMyProfile(
-            @Parameter(hidden = true) @CurrentUserId Long userId
-    ) {
-        log.info("[API] GET /api/v1/users/me - 사용자 ID: {}", userId);
-        UserProfileResponseDto response = userService.getUserProfile(userId);
-        return ApiResponse.ok(response);
+    @Operation(summary = "로컬 회원가입", description = "이메일과 비밀번호를 사용하여 신규 사용자를 등록합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "회원가입 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 유효성 검증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 사용 중인 이메일")
+    })
+    @PostMapping("/signup")
+    public ResponseEntity<ApiResponse<SignupResponseDto>> signup(@Valid @RequestBody SignupRequestDto signupRequestDto) {
+        SignupResponseDto response = userService.signUp(signupRequestDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("회원가입이 완료되었습니다. 이메일 인증을 진행해주세요.", response));
     }
 
-    /**
-     * 프로필을 수정합니다.
-     *
-     * @param userId  현재 로그인한 사용자 ID
-     * @param request 프로필 수정 요청 DTO
-     * @return 수정된 프로필 응답 DTO
-     */
-    @Operation(summary = "프로필 수정", description = "닉네임 또는 프로필 이미지를 수정합니다.")
-    @PatchMapping("/me")
-    public ApiResponse<UserProfileResponseDto> updateProfile(
-            @Parameter(hidden = true) @CurrentUserId Long userId,
-            @Valid @RequestBody UpdateProfileRequestDto request
-    ) {
-        log.info("[API] PATCH /api/v1/users/me - 사용자 ID: {}", userId);
-        UserProfileResponseDto response = userService.updateProfile(userId, request);
-        return ApiResponse.ok(response, "프로필이 수정되었습니다.");
+    @Operation(summary = "로컬 로그인", description = "이메일과 비밀번호로 로그인하고 JWT 토큰을 발급받습니다.")
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponseDto>> login(@Valid @RequestBody LoginRequestDto loginRequestDto, HttpServletResponse response) {
+        LoginResponseDto loginResponse = authService.login(loginRequestDto);
+        cookieUtil.addRefreshTokenCookie(response, loginResponse.getRefreshToken());
+        return ResponseEntity.ok(ApiResponse.success("로그인에 성공했습니다.", loginResponse));
     }
 
-    /**
-     * 비밀번호를 변경합니다.
-     *
-     * @param userId  현재 로그인한 사용자 ID
-     * @param request 비밀번호 변경 요청 DTO
-     * @return 성공 응답
-     */
-    @Operation(summary = "비밀번호 변경", description = "현재 비밀번호를 확인하고 새 비밀번호로 변경합니다.")
-    @PatchMapping("/me/password")
-    public ApiResponse<Void> changePassword(
-            @Parameter(hidden = true) @CurrentUserId Long userId,
-            @Valid @RequestBody ChangePasswordRequestDto request
-    ) {
-        log.info("[API] PATCH /api/v1/users/me/password - 사용자 ID: {}", userId);
-        userService.changePassword(userId, request);
-        return ApiResponse.ok("비밀번호가 변경되었습니다.");
+    @Operation(summary = "로그아웃", description = "Refresh Token 쿠키를 삭제하여 로그아웃 처리합니다.")
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout(HttpServletRequest request, HttpServletResponse response) {
+        cookieUtil.getRefreshToken(request).ifPresent(authService::logout);
+        cookieUtil.deleteRefreshTokenCookie(response);
+        return ResponseEntity.ok(ApiResponse.success("성공적으로 로그아웃되었습니다.", null));
     }
 
-    /**
-     * 회원 탈퇴를 처리합니다.
-     *
-     * @param userId 현재 로그인한 사용자 ID
-     * @return 성공 응답
-     */
-    @Operation(
-            summary = "회원 탈퇴",
-            description = "회원 탈퇴를 처리합니다. 탈퇴 후 30일 이내에 복구 가능합니다."
-    )
-    @DeleteMapping("/me")
-    public ApiResponse<Void> withdrawUser(
-            @Parameter(hidden = true) @CurrentUserId Long userId
-    ) {
-        log.info("[API] DELETE /api/v1/users/me - 사용자 ID: {}", userId);
-        userService.withdrawUser(userId);
-        return ApiResponse.ok("회원 탈퇴가 완료되었습니다. 30일 이내에 복구 가능합니다.");
+    @Operation(summary = "Access Token 갱신", description = "...")
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<TokenRefreshResponseDto>> refresh(HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = cookieUtil.getRefreshToken(request)
+                .orElseThrow(() -> new TrainException(ErrorCode.REFRESH_TOKEN_INVALID)); // 커스텀 예외로 변경
+
+        TokenRefreshResponseDto responseDto = authService.refreshAccessToken(refreshToken);
+
+        // 새로운 Refresh Token으로 쿠키를 업데이트해줍니다.
+        cookieUtil.addRefreshTokenCookie(response, responseDto.getRefreshToken());
+
+        return ResponseEntity.ok(ApiResponse.success("토큰이 성공적으로 갱신되었습니다.", responseDto));
     }
 
-    /**
-     * 탈퇴 철회를 처리합니다.
-     *
-     * @param userId 현재 로그인한 사용자 ID
-     * @return 성공 응답
-     */
-    @Operation(
-            summary = "탈퇴 철회",
-            description = "탈퇴한 계정을 복구합니다. 탈퇴 후 30일 이내에만 가능합니다."
-    )
-    @PostMapping("/me/restore")
-    public ApiResponse<Void> restoreUser(
-            @Parameter(hidden = true) @CurrentUserId Long userId
-    ) {
-        log.info("[API] POST /api/v1/users/me/restore - 사용자 ID: {}", userId);
-        userService.restoreUser(userId);
-        return ApiResponse.ok("계정이 복구되었습니다.");
+    @Operation(summary = "내 프로필 조회", description = "현재 로그인한 사용자의 프로필 정보를 조회합니다.")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<UserProfileResponseDto>> getMyProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        UserProfileResponseDto profile = userService.getProfile(userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponse.success("프로필 조회에 성공했습니다.", profile));
+    }
+
+    @Operation(summary = "내 프로필 수정", description = "현재 로그인한 사용자의 프로필 정보를 수정합니다.")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<UserProfileResponseDto>> updateMyProfile(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody ProfileUpdateRequestDto profileUpdateRequestDto) {
+        UserProfileResponseDto updatedProfile = userService.updateProfile(userDetails.getUserId(), profileUpdateRequestDto);
+        return ResponseEntity.ok(ApiResponse.success("프로필이 성공적으로 수정되었습니다.", updatedProfile));
+    }
+
+    @Operation(summary = "비밀번호 변경", description = "현재 로그인한 사용자의 비밀번호를 변경합니다. (로컬 계정 전용)")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PutMapping("/password")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody PasswordChangeRequestDto passwordChangeRequestDto) {
+        userService.changePassword(userDetails.getUserId(), passwordChangeRequestDto);
+        return ResponseEntity.ok(ApiResponse.success("비밀번호가 성공적으로 변경되었습니다.", null));
     }
 }
