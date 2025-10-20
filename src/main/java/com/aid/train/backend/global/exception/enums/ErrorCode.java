@@ -14,52 +14,46 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum ErrorCode {
 
-    // =========================
-    // 인증 및 권한 관련
-    // =========================
-    NEED_LOGIN("NEED_LOGIN", "로그인이 필요한 작업입니다.", 401),
-    UNAUTHORIZED("UNAUTHORIZED", "인증이 필요합니다.", 401),
-    FORBIDDEN("FORBIDDEN", "접근 권한이 없습니다.", 403),
-    DUPLICATE_EMAIL("DUPLICATE_EMAIL", "이미 사용 중인 이메일입니다.", 409),
-    INVALID_EMAIL("INVALID_EMAIL", "이메일이 올바르지 않습니다.", 401),
-    INVALID_PASSWORD("INVALID_PASSWORD", "비밀번호가 올바르지 않습니다.", 401),
-    INVALID_CREDENTIALS("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401),
-    EMAIL_NOT_VERIFIED("EMAIL_NOT_VERIFIED", "이메일 인증이 완료되지 않았습니다.", 403),
-    EMAIL_ALREADY_EXISTS("EMAIL_ALREADY_EXISTS", "이미 등록된 이메일입니다.", 409),
-    INVALID_VERIFICATION_CODE("INVALID_VERIFICATION_CODE", "유효하지 않은 인증 코드입니다.", 400),
-    VERIFICATION_CODE_EXPIRED("VERIFICATION_CODE_EXPIRED", "인증 코드가 만료되었습니다.", 410),
-    ALREADY_VERIFIED("ALREADY_VERIFIED", "이미 인증이 완료되었습니다.", 400),
+    // ===== 인증 및 권한 (401, 403) =====
+    UNAUTHORIZED("AUTH_001", "인증이 필요합니다.", 401),
+    FORBIDDEN("AUTH_002", "접근 권한이 없습니다.", 403),
+    LOGIN_FAILED("AUTH_003", "이메일 또는 비밀번호가 올바르지 않습니다.", 401),
+    USER_EMAIL_NOT_VERIFIED("AUTH_004", "이메일 인증이 완료되지 않았습니다.", 403),
 
-    // =========================
-    // 토큰 관련
-    // =========================
-    INVALID_TOKEN("INVALID_TOKEN", "유효하지 않은 토큰입니다.", 401),
-    EXPIRED_TOKEN("EXPIRED_TOKEN", "만료된 토큰입니다.", 401),
-    INVALID_REFRESH_TOKEN("INVALID_REFRESH_TOKEN", "유효하지 않은 리프레시 토큰입니다.", 401),
-    INVALID_TEMP_TOKEN("INVALID_TEMP_TOKEN", "유효하지 않은 임시 토큰입니다.", 401),
-    TEMP_TOKEN_EXPIRED("TEMP_TOKEN_EXPIRED", "임시 토큰이 만료되었습니다.", 401),
+    // ===== 토큰 관련 (401) =====
+    TOKEN_INVALID("TOKEN_001", "유효하지 않은 토큰입니다.", 401),
+    TOKEN_EXPIRED("TOKEN_002", "만료된 토큰입니다.", 401),
+    TOKEN_INVALID_SIGNATURE("TOKEN_003", "토큰 서명이 유효하지 않습니다.", 401),
+    TOKEN_UNSUPPORTED("TOKEN_004", "지원되지 않는 형식의 토큰입니다.", 401),
+    REFRESH_TOKEN_INVALID("TOKEN_005", "리프레시 토큰이 유효하지 않습니다.", 401),
 
-    // =========================
-    // 사용자 관련
-    // =========================
-    USER_NOT_FOUND("USER_NOT_FOUND", "사용자를 찾을 수 없습니다.", 404),
-    USER_ALREADY_EXISTS("USER_ALREADY_EXISTS", "이미 존재하는 사용자입니다.", 409),
-    INACTIVE_USER("INACTIVE_USER", "비활성화된 사용자입니다.", 403),
-    SUSPENDED_USER("SUSPENDED_USER", "정지된 사용자입니다.", 403),
-    WITHDRAWN_USER("WITHDRAWN_USER", "탈퇴한 사용자입니다.", 410),
-    USER_ALREADY_WITHDRAWN("USER_ALREADY_WITHDRAWN", "이미 탈퇴한 사용자입니다.", 409),
-    USER_NOT_WITHDRAWN("USER_NOT_WITHDRAWN", "탈퇴하지 않은 사용자입니다.", 400),
-    CANNOT_RESTORE_USER("CANNOT_RESTORE_USER", "복구 가능 기간이 지났습니다.", 400),
-    INVALID_USER_STATUS("INVALID_USER_STATUS", "유효하지 않은 사용자 상태입니다.", 400),
-    SOCIAL_USER_NO_PASSWORD("SOCIAL_USER_NO_PASSWORD", "소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다.", 400),
-    SAME_AS_CURRENT_PASSWORD("SAME_AS_CURRENT_PASSWORD", "현재 비밀번호와 동일합니다.", 400),
+    // ===== 이메일 및 소셜 인증 토큰 (400, 401, 410) =====
+    VERIFICATION_TOKEN_INVALID("VERIFY_001", "유효하지 않은 인증 세션입니다.", 401),
+    VERIFICATION_TOKEN_EXPIRED("VERIFY_002", "인증 세션이 만료되었습니다. 다시 시도해주세요.", 410),
+    VERIFICATION_CODE_INVALID("VERIFY_003", "인증 코드가 올바르지 않습니다.", 400),
+    VERIFICATION_EMAIL_MISMATCH("VERIFY_004", "요청 이메일과 토큰의 이메일이 일치하지 않습니다.", 400),
+    SOCIAL_SIGNUP_PENDING_TOKEN_INVALID("VERIFY_005", "소셜 회원가입 세션이 유효하지 않습니다.", 401),
+    EMAIL_SEND_FAILED("SERVER_002", "이메일 발송에 실패했습니다.", 500),
 
-    // =========================
-    // 약관 관련
-    // =========================
-    TERMS_NOT_FOUND("TERMS_NOT_FOUND", "약관을 찾을 수 없습니다.", 404),
-    REQUIRED_TERMS_NOT_AGREED("REQUIRED_TERMS_NOT_AGREED", "필수 약관에 동의해야 합니다.", 400),
-    CANNOT_REVOKE_REQUIRED_TERMS("CANNOT_REVOKE_REQUIRED_TERMS", "필수 약관은 철회할 수 없습니다.", 400),
+    // ===== 사용자 관련 (404, 409) =====
+    USER_NOT_FOUND("USER_001", "사용자를 찾을 수 없습니다.", 404),
+    USER_EMAIL_DUPLICATED("USER_002", "이미 사용 중인 이메일입니다.", 409),
+    USER_EMAIL_ALREADY_LINKED("USER_003", "이미 다른 방법으로 가입된 이메일입니다.", 409),
+    USER_NOT_FOUND_OR_ALREADY_VERIFIED("USER_004", "사용자를 찾을 수 없거나 이미 인증된 사용자입니다.", 404),
+    ALREADY_VERIFIED("USER_005", "이미 인증이 완료된 계정입니다.", 400),
+
+    // ===== 비즈니스 규칙 위반 (400) =====
+    PASSWORD_MISMATCH("RULE_001", "비밀번호가 일치하지 않습니다.", 400),
+    USER_AGE_RESTRICTION("RULE_002", "만 14세 이상만 가입할 수 있습니다.", 400),
+    JOB_DETAIL_REQUIRED("RULE_003", "기타 직업 선택 시 상세 정보는 필수입니다.", 400),
+    CURRENT_PASSWORD_INVALID("RULE_004", "현재 비밀번호가 올바르지 않습니다.", 400),
+    NEW_PASSWORD_SAME_AS_OLD("RULE_005", "새 비밀번호는 현재 비밀번호와 달라야 합니다.", 400),
+    SOCIAL_USER_PASSWORD_CHANGE_NOT_ALLOWED("RULE_006", "소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다.", 400),
+
+    // ===== 약관 관련 (400, 404) =====
+    TERMS_NOT_FOUND_OR_VERSION_MISMATCH("TERMS_001", "약관을 찾을 수 없거나 버전이 일치하지 않습니다.", 404),
+    REQUIRED_TERMS_NOT_AGREED("TERMS_002", "필수 약관에 동의해야 합니다.", 400),
+    CANNOT_UPDATE_REQUIRED_TERMS("TERMS_003", "필수 약관의 동의 상태는 변경할 수 없습니다.", 400),
 
     // =========================
     // 공통 유효성 / 시스템 에러

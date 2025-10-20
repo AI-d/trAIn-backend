@@ -3,30 +3,12 @@ package com.aid.train.backend.domain.terms.entity;
 import com.aid.train.backend.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
 /**
  * 약관 동의 이력 엔티티 클래스입니다.
- * 각 사용자가 동의한 약관 내역과 법적 증거 정보를 저장합니다.
- *
- * <p>
- * 주요 기능:
- * <ul>
- *   <li>사용자별 약관 동의 내역 관리</li>
- *   <li>동의 시점의 IP 주소 및 User-Agent 기록 (법적 증거)</li>
- *   <li>동의 철회 및 재동의 관리</li>
- * </ul>
- * </p>
- *
- * <p>
- * 법적 요구사항:
- * 개인정보보호법에 따라 약관 동의 시 IP 주소, User-Agent, 동의 시각을
- * 최소 3년간 보관해야 합니다.
- * </p>
+ * 각 사용자가 동의한 약관 내역을 저장합니다.
  *
  * @author 왕택준
  * @since 1.0.0
@@ -45,7 +27,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-@EntityListeners(AuditingEntityListener.class)
 public class UserConsent {
 
     /**
@@ -79,45 +60,16 @@ public class UserConsent {
 
     /**
      * 동의 일시
-     * 법적 증거로 사용
      */
     @Column(name = "consented_at", nullable = false)
     private LocalDateTime consentedAt;
 
     /**
      * 동의 철회 일시
-     * 법적 증거 및 마케팅 분석용
+     * 마케팅 동의 철회 시 사용
      */
     @Column(name = "revoked_at")
     private LocalDateTime revokedAt;
-
-    /**
-     * 동의 당시 클라이언트 IP 주소
-     * 법적 증거로 사용 (IPv4/IPv6 지원)
-     */
-    @Column(name = "ip_address", length = 45)
-    private String ipAddress;
-
-    /**
-     * 동의 당시 클라이언트 User-Agent
-     * 법적 증거로 사용
-     */
-    @Column(name = "user_agent", length = 500)
-    private String userAgent;
-
-    /**
-     * 레코드 생성 일시
-     */
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    /**
-     * 레코드 수정 일시
-     */
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 
     /**
      * 동의를 철회합니다.
@@ -142,13 +94,15 @@ public class UserConsent {
      * 약관 동의 정보를 업데이트합니다.
      *
      * @param isAgreed 동의 여부
-     * @param ipAddress 클라이언트 IP 주소
-     * @param userAgent 클라이언트 User-Agent
      */
-    public void updateConsent(Boolean isAgreed, String ipAddress, String userAgent) {
+    public void updateConsent(Boolean isAgreed) {
         this.isAgreed = isAgreed;
         this.consentedAt = LocalDateTime.now();
-        this.ipAddress = ipAddress;
-        this.userAgent = userAgent;
+
+        if (!isAgreed) {
+            this.revokedAt = LocalDateTime.now();
+        } else {
+            this.revokedAt = null;
+        }
     }
 }

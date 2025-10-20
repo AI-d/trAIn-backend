@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 직업 유형 Enum 클래스입니다.
- * 사용자의 직업 정보를 관리하며, 향후 직업군별 맞춤 서비스 제공에 활용됩니다.
+ * 일반적인 직업 분류를 제공하며, 사용자 프로필 관리에 활용됩니다.
  *
  * <p>
  * 사용 위치:
@@ -32,39 +32,34 @@ import lombok.RequiredArgsConstructor;
 public enum JobType {
 
     /**
+     * 학생 (초/중/고등학생, 대학생, 대학원생)
+     */
+    STUDENT("학생"),
+
+    /**
+     * 취업준비생
+     */
+    JOB_SEEKER("취업준비생"),
+
+    /**
      * 직장인 (회사원, 공무원 등)
      */
     EMPLOYEE("직장인"),
 
     /**
-     * 학생 (대학생, 대학원생, 고등학생 등)
+     * 자영업자 (개인사업자, 사업자)
      */
-    STUDENT("학생"),
+    SELF_EMPLOYED("자영업자"),
 
     /**
-     * 주부/주부
-     */
-    HOUSEWIFE("주부"),
-
-    /**
-     * 프리랜서 (개인사업자, 자영업자 포함)
+     * 프리랜서
      */
     FREELANCER("프리랜서"),
 
     /**
-     * 사업가/기업가
+     * 주부
      */
-    BUSINESS_OWNER("사업가"),
-
-    /**
-     * 구직자/취업준비생
-     */
-    JOB_SEEKER("구직자"),
-
-    /**
-     * 은퇴자
-     */
-    RETIRED("은퇴자"),
+    HOUSEWIFE("주부"),
 
     /**
      * 기타 (상세 입력 필요)
