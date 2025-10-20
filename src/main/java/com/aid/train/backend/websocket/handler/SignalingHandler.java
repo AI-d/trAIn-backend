@@ -4,6 +4,7 @@ import com.aid.train.backend.websocket.dto.server.AnswerMessage;
 import com.aid.train.backend.websocket.dto.client.IceCandidateMessage;
 import com.aid.train.backend.websocket.dto.client.OfferMessage;
 import com.aid.train.backend.websocket.model.MessageType;
+import com.aid.train.backend.websocket.service.GptSessionManager;
 import com.aid.train.backend.websocket.service.WebRtcStateManager;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,6 +49,7 @@ public class SignalingHandler extends TextWebSocketHandler {
 
     private final ObjectMapper objectMapper;
     private final WebRtcStateManager webRtcStateManager;
+    private final GptSessionManager gptSessionManager;
 
     /**
      * sessionId -> WebSocketSession 매핑
@@ -141,7 +143,7 @@ public class SignalingHandler extends TextWebSocketHandler {
         webRtcStateManager.updateState(sessionId, WebRtcStateManager.State.CONNECTING);
 
         // Gpt Realtime API 로 Offer 전송
-        String gptAnswerSdp = webRtcStateManager.connectToGptRealtime(sessionId, offer.getSdp());
+        String gptAnswerSdp = gptSessionManager.connectToGptRealtime(sessionId, offer.getSdp());
 
         // TODO: 실제 WebRTC Answer 생성 로직
         // 현재는 Mock Answer 반환
