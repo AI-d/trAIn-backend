@@ -111,7 +111,7 @@ public class AudioHandler extends AbstractWebSocketHandler {
      * @param session WebSocket 연결 객체
      * @param message 바이너리 메시지 (음성 데이터)
      */
-    @Override
+    /*@Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
         String sessionId = extractSessionId(session);
 
@@ -141,7 +141,7 @@ public class AudioHandler extends AbstractWebSocketHandler {
         } catch (Exception e) {
             log.error("AudioHandler - 음성 처리 실패 - sessionId: {}", sessionId, e);
         }
-    }
+    }*/
 
     /**
      * WebSocket 연결이 종료되었을 때 호출됩니다.
