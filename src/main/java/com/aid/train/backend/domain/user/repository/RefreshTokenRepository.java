@@ -1,7 +1,6 @@
 package com.aid.train.backend.domain.user.repository;
 
 import com.aid.train.backend.domain.user.entity.RefreshToken;
-import com.aid.train.backend.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,8 +12,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * RefreshToken 엔티티의 Repository 인터페이스입니다.
- * JWT 리프레시 토큰의 조회, 저장, 삭제 등의 데이터 접근 기능을 제공합니다.
+ * RefreshToken 엔티티 Repository
+ * JWT 리프레시 토큰 관리 핵심 기능
  *
  * @author 왕택준
  * @since 1.0.0
@@ -22,108 +21,61 @@ import java.util.Optional;
 @Repository
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
+    // ===== 토큰 관리 핵심 기능 =====
+
     /**
-     * 토큰 문자열로 리프레시 토큰을 조회합니다.
-     *
-     * @param token 토큰 문자열
-     * @return 리프레시 토큰 Optional
+     * 토큰 값으로 조회
      */
     Optional<RefreshToken> findByToken(String token);
 
     /**
-     * 특정 사용자의 모든 리프레시 토큰을 조회합니다.
-     * 최신 생성순으로 정렬
-     *
-     * @param user 사용자
-     * @return 리프레시 토큰 목록
+     * 사용자별 모든 토큰 조회 (멀티 디바이스)
      */
-    List<RefreshToken> findByUserOrderByCreatedAtDesc(User user);
+    List<RefreshToken> findByUserId(Long userId);
 
     /**
-     * 특정 사용자의 활성화된 리프레시 토큰만 조회합니다.
-     * 최신 생성순으로 정렬
-     *
-     * @param user    사용자
-     * @param revoked 폐기 여부
-     * @return 리프레시 토큰 목록
+     * 유효한 토큰 조회 (만료되지 않은 토큰)
      */
-    List<RefreshToken> findByUserAndRevokedOrderByCreatedAtDesc(User user, Boolean revoked);
+    @Query("SELECT rt FROM RefreshToken rt WHERE rt.token = :token AND rt.expiryDate > :now")
+    Optional<RefreshToken> findValidToken(@Param("token") String token, @Param("now") LocalDateTime now);
+
+    // ===== 토큰 삭제 =====
 
     /**
-     * 특정 사용자의 만료 임박 토큰을 조회합니다.
-     * 만료 일시가 빠른 순으로 정렬
-     *
-     * @param user 사용자
-     * @return 리프레시 토큰 목록
-     */
-    List<RefreshToken> findByUserOrderByExpiryDateAsc(User user);
-
-    /**
-     * 특정 사용자의 특정 디바이스 리프레시 토큰을 조회합니다.
-     *
-     * @param user     사용자
-     * @param deviceId 디바이스 ID
-     * @return 리프레시 토큰 Optional
-     */
-    Optional<RefreshToken> findByUserAndDeviceId(User user, String deviceId);
-
-    /**
-     * 특정 사용자의 모든 리프레시 토큰을 삭제합니다.
-     * 로그아웃 또는 회원 탈퇴 시 사용
-     *
-     * @param user 사용자
-     */
-    void deleteByUser(User user);
-
-    /**
-     * 특정 사용자의 폐기된 토큰을 삭제합니다.
-     * 토큰 정리용
-     *
-     * @param user    사용자
-     * @param revoked 폐기 여부
-     * @return 삭제된 토큰 개수
-     */
-    long deleteByUserAndRevoked(User user, Boolean revoked);
-
-    /**
-     * 만료된 리프레시 토큰을 벌크 삭제합니다.
-     * 스케줄러에서 주기적으로 실행 (만료 후 14일 지난 토큰)
-     *
-     * @param now 기준 일시
-     * @return 삭제된 토큰 개수
-     * @Modifying을 사용하여 단일 DELETE 쿼리로 실행
+     * 특정 토큰 삭제 (로그아웃)
      */
     @Modifying
-    @Query("DELETE FROM RefreshToken rt WHERE rt.expiryDate < :now")
-    int bulkDeleteExpiredTokens(@Param("now") LocalDateTime now);
+    @Query("DELETE FROM RefreshToken rt WHERE rt.token = :token")
+    int deleteByToken(@Param("token") String token);
 
     /**
-     * 폐기되었거나 만료된 토큰을 벌크 삭제합니다.
-     * 스케줄러에서 주기적으로 실행
-     *
-     * @param now 기준 일시
-     * @return 삭제된 토큰 개수
+     * 사용자의 모든 토큰 삭제 (전체 로그아웃, 계정 탈퇴)
      */
     @Modifying
-    @Query("DELETE FROM RefreshToken rt WHERE rt.revoked = true OR rt.expiryDate < :now")
-    int bulkDeleteInvalidTokens(@Param("now") LocalDateTime now);
+    @Query("DELETE FROM RefreshToken rt WHERE rt.user.id = :userId")
+    int deleteByUserId(@Param("userId") Long userId);
 
     /**
-     * 만료된 리프레시 토큰을 삭제합니다.
-     * 스케줄러에서 주기적으로 실행 (만료 후 14일 지난 토큰)
-     *
-     * @param expiryDate 기준 만료 일시
-     * @return 삭제된 토큰 개수
-     * @deprecated bulkDeleteExpiredTokens() 사용을 권장합니다 (성능 향상)
+     * 특정 시간 이전에 만료된 토큰을 모두 삭제합니다. (벌크 삭제)
      */
-    @Deprecated
-    long deleteByExpiryDateBefore(LocalDateTime expiryDate);
+    @Modifying
+    @Query("DELETE FROM RefreshToken rt WHERE rt.expiryDate < :threshold")
+    int deleteByExpiryDateBefore(@Param("threshold") LocalDateTime threshold);
+
+    // ===== 멀티 디바이스 관리 =====
 
     /**
-     * 토큰 존재 여부를 확인합니다.
-     *
-     * @param token 토큰 문자열
-     * @return 존재하면 true, 아니면 false
+     * 사용자별 토큰 개수 조회
      */
-    boolean existsByToken(String token);
+    long countByUserId(Long userId);
+
+    /**
+     * 사용자별 오래된 토큰 삭제 (디바이스 제한용)
+     * 최신 N개만 유지하고 나머지 삭제
+     */
+    @Modifying
+    @Query("DELETE FROM RefreshToken rt WHERE rt.user.id = :userId " +
+            "AND rt.id NOT IN (SELECT rt2.id FROM RefreshToken rt2 WHERE rt2.user.id = :userId " +
+            "ORDER BY rt2.createdAt DESC LIMIT :keepCount)")
+    int deleteOldTokensKeepRecent(@Param("userId") Long userId, @Param("keepCount") int keepCount);
 }
