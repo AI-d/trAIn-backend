@@ -120,7 +120,7 @@ public class SessionCoordinator {
             RealtimeSession session = RealtimeSession.builder()
                     .model("gpt-4o-realtime-preview-2025-10-15")
                     .instructions(instructions)
-                    .voice(scenario.getVoice().name())
+                    .voice(scenario.getVoice().name().toLowerCase())
                     .build();
 
             SessionInitMessage message = SessionInitMessage.makePrompt(session);
@@ -136,6 +136,7 @@ public class SessionCoordinator {
                     sessionId,
                     message,
                     this::handleGptResponse
+
             ).thenAccept((v) -> {
                 GptSession gSession = gptSessionMap.get(sessionId);
                 if (gSession != null) {
