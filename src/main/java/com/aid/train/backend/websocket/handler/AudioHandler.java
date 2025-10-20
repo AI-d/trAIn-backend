@@ -111,7 +111,7 @@ public class AudioHandler extends AbstractWebSocketHandler {
      * @param session WebSocket 연결 객체
      * @param message 바이너리 메시지 (음성 데이터)
      */
-    /*@Override
+    @Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
         String sessionId = extractSessionId(session);
 
@@ -119,29 +119,39 @@ public class AudioHandler extends AbstractWebSocketHandler {
             // 1. 바이너리 데이터 추출
             byte[] audioData = message.getPayload().array();
 
+            if(audioData == null || audioData.length == 0) {
+                log.warn("AudioHandler - 빈 오디오 데이터 - sessionId: {}", sessionId);
+                return;
+            }
+
             log.debug("AudioHandler - 음성 수신 - sessionId: {}, 크기: {} bytes",
                     sessionId, audioData.length);
 
             // 2. WebRTC 연결 상태 확인 및 업데이트
             if (!webRtcStateManager.isConnected(sessionId)) {
-                // 첫 음성 데이터 수신 시 WebRTC CONNECTED로 변경
+                // webRtc 연결 확인 후 음성 전달 시작
+                log.debug("AudioHandler - WebRTC 연결 대기 중 - sessionId: {}", sessionId);
+                return;
+
+                /*// 첫 음성 데이터 수신 시 WebRTC CONNECTED로 변경
                 webRtcStateManager.updateState(sessionId, WebRtcStateManager.State.CONNECTED);
-                log.info("AudioHandler - WebRTC 연결됨 - sessionId: {}", sessionId);
+                log.info("AudioHandler - WebRTC 연결됨 - sessionId: {}", sessionId);*/
             }
 
-            // 3. SessionCoordinator를 통해 GPT로 라우팅
+            // 3. gpt 세션 확인 후 큐에 저장
             if (!sessionCoordinator.hasGptSession(sessionId)) {
-                log.warn("GPT 세션 없음, 큐에 저장 - sessionId: {}", sessionId);
+                log.warn("AudioHandler - GPT 세션 준비 중, 큐에 저장 - sessionId: {}", sessionId);
                 sessionCoordinator.queueAudio(sessionId, audioData);
                 return;
             }
 
+            // 4. gpt 로 음성 라우팅
             sessionCoordinator.routeAudioToGpt(sessionId, audioData);
 
         } catch (Exception e) {
             log.error("AudioHandler - 음성 처리 실패 - sessionId: {}", sessionId, e);
         }
-    }*/
+    }
 
     /**
      * WebSocket 연결이 종료되었을 때 호출됩니다.

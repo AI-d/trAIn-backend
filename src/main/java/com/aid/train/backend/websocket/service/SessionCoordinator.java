@@ -192,12 +192,13 @@ public class SessionCoordinator {
             }
 
             // 2. GPT 세션 확인
-            if (!gptSessionManager.hasGptSession(sessionId)) {
+            GptSession gptSession = gptSessionMap.get(sessionId);
+            if (gptSession == null) {
                 log.error("GPT 세션 없음 - sessionId: {}", sessionId);
                 return;
             }
 
-            // 3. GPT에 음성 전송
+            // 3. ready 상태 확인
             gptSessionManager.sendAudioToGpt(sessionId, audioData);
 
             // 4. 통계 기록
