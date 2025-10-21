@@ -1,6 +1,7 @@
 package com.aid.train.backend.domain.user.entity;
 
 import com.aid.train.backend.domain.terms.entity.UserConsent;
+import com.aid.train.backend.domain.user.enums.JobType;
 import com.aid.train.backend.domain.user.enums.Provider;
 import com.aid.train.backend.domain.user.enums.UserStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,6 +11,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,8 +25,18 @@ import java.util.List;
  * <ul>
  *   <li>로컬 회원가입 사용자 관리 (이메일/비밀번호)</li>
  *   <li>소셜 로그인 사용자 관리 (카카오/구글/네이버)</li>
- *   <li>이메일 인증 상태 관리</li>
+ *   <li>이메일 인증 상태 관리 (EmailVerification 엔티티 참조)</li>
  *   <li>계정 상태 관리 (활성/비활성/정지/탈퇴)</li>
+ *   <li>개인 정보 관리 (생년월일, 직업)</li>
+ * </ul>
+ * </p>
+ *
+ * <p>
+ * 이메일 중복 정책:
+ * <ul>
+ *   <li>같은 provider 내에서는 이메일 중복 불가</li>
+ *   <li>다른 provider 간에는 같은 이메일 사용 가능</li>
+ *   <li>예: test@gmail.com + LOCAL, test@gmail.com + GOOGLE 모두 가능</li>
  * </ul>
  * </p>
  *
@@ -32,7 +44,20 @@ import java.util.List;
  * @since 1.0.0
  */
 @Entity
-@Table(name = "users")
+@Table(
+        name = "users",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_email_provider",
+                        columnNames = {"email", "primary_provider"}
+                )
+        },
+        indexes = {
+                @Index(name = "idx_user_email", columnList = "email"),
+                @Index(name = "idx_user_status", columnList = "status"),
+                @Index(name = "idx_user_last_login", columnList = "last_login_at")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -40,139 +65,124 @@ import java.util.List;
 @EntityListeners(AuditingEntityListener.class)
 public class User {
 
-    /**
-     * 사용자 고유 ID (자동 생성)
-     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * 이메일 주소 (필수, 고유값)
-     * 로컬 회원가입 및 소셜 로그인 식별자로 사용
-     */
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, length = 100)
     private String email;
 
-    /**
-     * 비밀번호 (암호화 저장, BCrypt 60자)
-     * 로컬 회원가입 사용자만 사용, 소셜 로그인 사용자는 null
-     */
     @Column(length = 60)
     private String password;
 
-    /**
-     * 사용자 이름 (필수, 최대 50자)
-     */
     @Column(nullable = false, length = 50)
     private String name;
 
-    /**
-     * 주 인증 제공자 (LOCAL, KAKAO, GOOGLE, NAVER)
-     * 최초 가입 시 사용한 인증 방식
-     */
+    @Column(length = 50)
+    private String nickname;
+
+    @Column(name = "profile_image_url", length = 500)
+    private String profileImageUrl;
+
+    @Column(name = "birth_date", nullable = false)
+    private LocalDate birthDate;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "job_type", nullable = false, length = 20)
+    private JobType jobType;
+
+    @Column(name = "job_detail", length = 100)
+    private String jobDetail;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "primary_provider", nullable = false, length = 20)
     private Provider primaryProvider;
 
-    /**
-     * 이메일 인증 완료 여부
-     * 로컬 회원가입 사용자는 이메일 인증 필수
-     * 소셜 로그인 사용자는 기본값 true
-     */
-    @Column(nullable = false)
+    @Column(name = "email_verified", nullable = false)
     @Builder.Default
     private Boolean emailVerified = false;
 
-    /**
-     * 계정 상태 (ACTIVE, INACTIVE, SUSPENDED, WITHDRAWN)
-     * 기본값: ACTIVE
-     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
     private UserStatus status = UserStatus.ACTIVE;
 
-    /**
-     * 회원 탈퇴 일시
-     * 탈퇴 시에만 값이 설정됨
-     */
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    /**
-     * 연동된 소셜 계정 목록
-     * 하나의 계정에 여러 소셜 로그인 연동 가능
-     */
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @JsonIgnore
     private List<SocialAccount> socialAccounts = new ArrayList<>();
 
-    /**
-     * 사용자가 동의한 약관 목록
-     */
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     @Builder.Default
     @JsonIgnore
     private List<UserConsent> consents = new ArrayList<>();
 
-    /**
-     * 계정 생성 일시
-     */
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    /**
-     * 계정 정보 수정 일시
-     */
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    /**
-     * 엔티티 저장/수정 전 비밀번호 무결성을 검증합니다.
-     * LOCAL 계정은 비밀번호 필수, 소셜 로그인 계정은 비밀번호 null 처리
-     *
-     * @throws IllegalStateException LOCAL 계정인데 비밀번호가 없는 경우
-     */
     @PrePersist
-    @PreUpdate
-    private void validatePasswordIntegrity() {
+    private void validateOnCreate() {
         if (this.primaryProvider == Provider.LOCAL) {
             if (this.password == null || this.password.trim().isEmpty()) {
                 throw new IllegalStateException("LOCAL 계정은 비밀번호가 필수입니다.");
             }
         }
-        if (this.primaryProvider != Provider.LOCAL) {
-            this.password = null;
+    }
+
+    @PreUpdate
+    private void validateOnUpdate() {
+        if (this.primaryProvider == Provider.LOCAL &&
+                this.password != null && this.password.trim().isEmpty()) {
+            throw new IllegalStateException("비밀번호는 빈 문자열일 수 없습니다.");
         }
     }
 
-    /**
-     * 이메일 인증을 완료 처리합니다.
-     */
+    public static User createLocalUser(String email, String password, String name, LocalDate birthDate, JobType jobType) {
+        return User.builder()
+                .email(email)
+                .password(password)
+                .name(name)
+                .birthDate(birthDate)
+                .jobType(jobType)
+                .primaryProvider(Provider.LOCAL)
+                .emailVerified(false)
+                .build();
+    }
+
+    public static User createSocialUser(String email, String name, LocalDate birthDate, JobType jobType, Provider provider) {
+        return User.builder()
+                .email(email)
+                .name(name)
+                .birthDate(birthDate)
+                .jobType(jobType)
+                .primaryProvider(provider)
+                .emailVerified(true)
+                .build();
+    }
+
     public void verifyEmail() {
         this.emailVerified = true;
     }
 
-    /**
-     * 계정 상태를 변경합니다.
-     *
-     * @param status 변경할 계정 상태
-     */
+    public void updateLastLogin() {
+        this.lastLoginAt = LocalDateTime.now();
+    }
+
     public void updateStatus(UserStatus status) {
         this.status = status;
     }
 
-    /**
-     * 비밀번호를 변경합니다.
-     * LOCAL 계정만 사용 가능
-     *
-     * @param encodedPassword 암호화된 새 비밀번호
-     * @throws IllegalStateException 소셜 로그인 계정인 경우
-     */
     public void updatePassword(String encodedPassword) {
         if (this.primaryProvider != Provider.LOCAL) {
             throw new IllegalStateException("소셜 로그인 계정은 비밀번호를 변경할 수 없습니다.");
@@ -180,39 +190,79 @@ public class User {
         this.password = encodedPassword;
     }
 
-    /**
-     * 회원 탈퇴를 처리합니다.
-     * 계정 상태를 WITHDRAWN으로 변경하고 탈퇴 일시를 기록합니다.
-     */
+    public void updatePersonalInfo(String name, LocalDate birthDate) {
+        if (name != null && !name.trim().isEmpty()) {
+            this.name = name;
+        }
+        this.birthDate = birthDate;
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void updateProfileImage(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    public void updateJobInfo(JobType jobType, String jobDetail) {
+        this.jobType = jobType;
+        if (jobType != null && jobType.requiresDetail() && jobDetail != null) {
+            this.jobDetail = jobDetail.trim();
+        } else {
+            this.jobDetail = null;
+        }
+    }
+
     public void withdraw() {
         this.status = UserStatus.WITHDRAWN;
         this.deletedAt = LocalDateTime.now();
     }
 
-    /**
-     * 휴면 계정으로 전환합니다.
-     * 1년 이상 미접속 계정을 INACTIVE 상태로 변경합니다.
-     * DataCleanupScheduler에서 호출됩니다.
-     */
+    public void restore() {
+        this.status = UserStatus.ACTIVE;
+        this.deletedAt = null;
+    }
+
     public void convertToInactive() {
         this.status = UserStatus.INACTIVE;
     }
 
-    /**
-     * LOCAL 계정 여부를 확인합니다.
-     *
-     * @return LOCAL 계정이면 true, 아니면 false
-     */
     public boolean isLocalAccount() {
         return this.primaryProvider == Provider.LOCAL;
     }
 
-    /**
-     * 소셜 로그인 계정 여부를 확인합니다.
-     *
-     * @return 소셜 로그인 계정이면 true, 아니면 false
-     */
     public boolean isSocialAccount() {
         return this.primaryProvider != Provider.LOCAL;
+    }
+
+    public boolean isEmailVerified() {
+        return Boolean.TRUE.equals(this.emailVerified);
+    }
+
+    public boolean isActive() {
+        return this.status == UserStatus.ACTIVE;
+    }
+
+    public boolean canRestore() {
+        if (this.status != UserStatus.WITHDRAWN || this.deletedAt == null) {
+            return false;
+        }
+        LocalDateTime restoreDeadline = this.deletedAt.plusDays(30);
+        return LocalDateTime.now().isBefore(restoreDeadline);
+    }
+
+    public int getAge() {
+        if (this.birthDate == null) {
+            return 0;
+        }
+        LocalDate today = LocalDate.now();
+        int age = today.getYear() - this.birthDate.getYear();
+        if (today.getMonthValue() < this.birthDate.getMonthValue() ||
+                (today.getMonthValue() == this.birthDate.getMonthValue() &&
+                        today.getDayOfMonth() < this.birthDate.getDayOfMonth())) {
+            age--;
+        }
+        return age;
     }
 }

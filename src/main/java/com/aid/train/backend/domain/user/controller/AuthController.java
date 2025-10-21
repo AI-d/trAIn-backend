@@ -7,7 +7,7 @@ import com.aid.train.backend.domain.user.dto.response.LoginResponseDto;
 import com.aid.train.backend.domain.user.dto.response.SignupResponseDto;
 import com.aid.train.backend.domain.user.dto.response.TokenResponseDto;
 import com.aid.train.backend.domain.user.service.AuthService;
-import com.aid.train.backend.global.common.response.ApiResponse;
+import com.aid.train.backend.global.response.ApiResponse;
 import com.aid.train.backend.global.security.annotation.CurrentUserId;
 import com.aid.train.backend.global.util.LogMaskingUtil;
 import io.swagger.v3.oas.annotations.Operation;

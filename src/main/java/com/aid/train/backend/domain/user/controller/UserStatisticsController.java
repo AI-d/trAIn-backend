@@ -2,7 +2,7 @@ package com.aid.train.backend.domain.user.controller;
 
 import com.aid.train.backend.domain.user.dto.response.UserStatisticsResponseDto;
 import com.aid.train.backend.domain.user.service.UserStatisticsService;
-import com.aid.train.backend.global.common.response.ApiResponse;
+import com.aid.train.backend.global.response.ApiResponse;
 import com.aid.train.backend.global.security.annotation.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

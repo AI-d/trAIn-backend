@@ -5,7 +5,7 @@ import com.aid.train.backend.domain.user.dto.request.SocialSignupRequestDto;
 import com.aid.train.backend.domain.user.dto.response.SignupResponseDto;
 import com.aid.train.backend.domain.user.dto.response.SocialLoginResponseDto;
 import com.aid.train.backend.domain.user.service.SocialAuthService;
-import com.aid.train.backend.global.common.response.ApiResponse;
+import com.aid.train.backend.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

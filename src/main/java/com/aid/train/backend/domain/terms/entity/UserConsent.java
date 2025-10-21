@@ -141,7 +141,7 @@ public class UserConsent {
     /**
      * 약관 동의 정보를 업데이트합니다.
      *
-     * @param isAgreed  동의 여부
+     * @param isAgreed 동의 여부
      * @param ipAddress 클라이언트 IP 주소
      * @param userAgent 클라이언트 User-Agent
      */

@@ -1,76 +1,89 @@
 package com.aid.train.backend.domain.user.dto.request;
 
+import com.aid.train.backend.domain.user.enums.JobType;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
-import lombok.AccessLevel;
+import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 /**
- * 회원가입 요청 DTO입니다.
- * 이메일 기반 회원가입 시 사용됩니다.
+ * 로컬 회원가입 요청 DTO입니다.
+ * 이메일, 비밀번호, 이름, 생년월일, 직업 정보를 받습니다.
  *
  * @author 왕택준
  * @since 1.0.0
  */
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Schema(description = "회원가입 요청 DTO")
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Schema(description = "로컬 회원가입 요청")
 public class SignupRequestDto {
 
+    /**
+     * 이메일 주소 (필수)
+     */
+    @Schema(description = "이메일", example = "user@example.com", required = true)
     @NotBlank(message = "이메일은 필수입니다.")
     @Email(message = "올바른 이메일 형식이 아닙니다.")
-    @Schema(description = "이메일", example = "user@example.com", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Size(max = 100, message = "이메일은 최대 100자까지 입력 가능합니다.")
     private String email;
 
+    /**
+     * 비밀번호 (필수, 8~20자, 영문+숫자+특수문자)
+     */
+    @Schema(description = "비밀번호 (8~20자, 영문+숫자+특수문자)", example = "Password123!", required = true)
     @NotBlank(message = "비밀번호는 필수입니다.")
-    @Pattern(regexp = "^(?=\\S+$).{8,20}$", message = "비밀번호는 8~20자이며 공백을 포함할 수 없습니다.")
-    @Schema(description = "비밀번호 (8~20자, 공백 불가, 영문+숫자+특수문자 권장)", example = "password123!", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Pattern(
+            regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,20}$",
+            message = "비밀번호는 8~20자의 영문, 숫자, 특수문자를 포함해야 합니다."
+    )
     private String password;
 
-    @NotBlank(message = "닉네임은 필수입니다.")
-    @Size(min = 2, max = 20, message = "닉네임은 2~20자 사이여야 합니다.")
-    @Schema(description = "닉네임 (2~20자)", example = "홍길동", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String nickname;
-
-    @NotNull(message = "서비스 이용약관 동의는 필수입니다.")
-    @Schema(description = "서비스 이용약관 동의 여부", example = "true", requiredMode = Schema.RequiredMode.REQUIRED)
-    private Boolean agreeTermsOfService;
-
-    @NotNull(message = "개인정보 처리방침 동의는 필수입니다.")
-    @Schema(description = "개인정보 처리방침 동의 여부", example = "true", requiredMode = Schema.RequiredMode.REQUIRED)
-    private Boolean agreePrivacyPolicy;
-
-    @Schema(description = "마케팅 수신 동의 여부 (선택)", example = "false")
-    private Boolean agreeMarketingConsent = false;
-
-    @NotBlank(message = "이메일 인증 코드는 필수입니다.")
-    @Pattern(regexp = "^[0-9]{6}$", message = "인증 코드는 6자리 숫자입니다.")
-    @Schema(description = "이메일 인증 코드 (6자리 숫자)", example = "123456", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String verificationCode;
+    /**
+     * 사용자 이름 (필수)
+     */
+    @Schema(description = "이름", example = "홍길동", required = true)
+    @NotBlank(message = "이름은 필수입니다.")
+    @Size(max = 50, message = "이름은 최대 50자까지 입력 가능합니다.")
+    private String name;
 
     /**
-     * 테스트용 생성자입니다.
+     * 생년월일 (필수)
      */
-    public SignupRequestDto(
-            String email,
-            String password,
-            String nickname,
-            Boolean agreeTermsOfService,
-            Boolean agreePrivacyPolicy,
-            Boolean agreeMarketingConsent,
-            String verificationCode
-    ) {
-        this.email = email;
-        this.password = password;
-        this.nickname = nickname;
-        this.agreeTermsOfService = agreeTermsOfService;
-        this.agreePrivacyPolicy = agreePrivacyPolicy;
-        this.agreeMarketingConsent = agreeMarketingConsent;
-        this.verificationCode = verificationCode;
+    @Schema(description = "생년월일", example = "1998-08-07", required = true)
+    @NotNull(message = "생년월일은 필수입니다.")
+    @Past(message = "생년월일은 과거 날짜여야 합니다.")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate birthDate;
+
+    /**
+     * 직업 유형 (선택)
+     */
+    @Schema(description = "직업 유형", example = "EMPLOYEE", required = false)
+    private JobType jobType;
+
+    /**
+     * 기타 직업 상세 (jobType이 OTHER인 경우만 필수)
+     */
+    @Schema(description = "기타 직업 상세 (jobType이 OTHER인 경우만)", example = "프리랜서 개발자", required = false)
+    @Size(max = 100, message = "직업 상세는 최대 100자까지 입력 가능합니다.")
+    private String jobDetail;
+
+    /**
+     * jobType이 OTHER인 경우 jobDetail 필수 검증
+     *
+     * @return 유효하면 true
+     */
+    public boolean isValid() {
+        if (jobType == JobType.OTHER) {
+            return jobDetail != null && !jobDetail.trim().isEmpty();
+        }
+        return true;
     }
 }

@@ -1,8 +1,8 @@
 package com.aid.train.backend.domain.verification.service;
 
-import com.aid.train.backend.domain.user.dto.request.EmailVerificationRequestDto;
-import com.aid.train.backend.domain.user.dto.request.VerifyCodeRequestDto;
-import com.aid.train.backend.domain.user.dto.response.EmailVerificationResponseDto;
+import com.aid.train.backend.domain.verification.dto.request.EmailVerificationRequestDto;
+import com.aid.train.backend.domain.verification.dto.request.VerifyCodeRequestDto;
+import com.aid.train.backend.domain.verification.dto.response.EmailVerificationResponseDto;
 import com.aid.train.backend.domain.user.repository.UserRepository;
 import com.aid.train.backend.domain.verification.entity.EmailVerification;
 import com.aid.train.backend.domain.verification.repository.EmailVerificationRepository;

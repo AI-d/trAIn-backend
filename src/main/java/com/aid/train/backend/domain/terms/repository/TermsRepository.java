@@ -22,7 +22,7 @@ public interface TermsRepository extends JpaRepository<Terms, Long> {
      * 특정 타입의 활성화된 약관을 조회합니다.
      * 회원가입 시 최신 약관 표시용
      *
-     * @param type     약관 타입
+     * @param type 약관 타입
      * @param isActive 활성화 여부
      * @return 약관 Optional
      */
@@ -31,7 +31,7 @@ public interface TermsRepository extends JpaRepository<Terms, Long> {
     /**
      * 특정 타입의 모든 활성화된 약관을 조회합니다.
      *
-     * @param type     약관 타입
+     * @param type 약관 타입
      * @param isActive 활성화 여부
      * @return 약관 목록
      */
@@ -49,7 +49,7 @@ public interface TermsRepository extends JpaRepository<Terms, Long> {
     /**
      * 특정 타입과 버전의 약관을 조회합니다.
      *
-     * @param type    약관 타입
+     * @param type 약관 타입
      * @param version 약관 버전
      * @return 약관 Optional
      */
@@ -67,7 +67,7 @@ public interface TermsRepository extends JpaRepository<Terms, Long> {
     /**
      * 특정 타입과 버전의 약관 존재 여부를 확인합니다.
      *
-     * @param type    약관 타입
+     * @param type 약관 타입
      * @param version 약관 버전
      * @return 존재하면 true, 아니면 false
      */

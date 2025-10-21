@@ -3,7 +3,7 @@ package com.aid.train.backend.domain.terms.controller;
 import com.aid.train.backend.domain.terms.dto.request.UserConsentRequestDto;
 import com.aid.train.backend.domain.terms.dto.response.UserConsentResponseDto;
 import com.aid.train.backend.domain.terms.service.UserConsentService;
-import com.aid.train.backend.global.common.response.ApiResponse;
+import com.aid.train.backend.global.response.ApiResponse;
 import com.aid.train.backend.global.security.annotation.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

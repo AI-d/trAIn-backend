@@ -4,7 +4,7 @@ import com.aid.train.backend.domain.user.dto.request.ChangePasswordRequestDto;
 import com.aid.train.backend.domain.user.dto.request.UpdateProfileRequestDto;
 import com.aid.train.backend.domain.user.dto.response.UserProfileResponseDto;
 import com.aid.train.backend.domain.user.service.UserService;
-import com.aid.train.backend.global.common.response.ApiResponse;
+import com.aid.train.backend.global.response.ApiResponse;
 import com.aid.train.backend.global.security.annotation.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

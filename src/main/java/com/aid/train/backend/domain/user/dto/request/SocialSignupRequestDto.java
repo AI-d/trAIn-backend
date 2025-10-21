@@ -1,59 +1,75 @@
 package com.aid.train.backend.domain.user.dto.request;
 
+import com.aid.train.backend.domain.user.enums.JobType;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
-import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 /**
- * 소셜 회원가입 요청 DTO입니다.
- * 소셜 로그인 후 추가 정보 입력 시 사용됩니다.
+ * 소셜 회원가입 추가정보 입력 요청 DTO입니다.
+ * PendingSocialUser에서 정식 User로 전환 시 사용됩니다.
  *
  * @author 왕택준
  * @since 1.0.0
  */
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Schema(description = "소셜 회원가입 요청 DTO")
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Schema(description = "소셜 회원가입 추가정보 입력 요청")
 public class SocialSignupRequestDto {
 
+    /**
+     * 임시 토큰 (PendingSocialUser의 tempToken)
+     */
+    @Schema(description = "임시 토큰", example = "abc123def456", required = true)
     @NotBlank(message = "임시 토큰은 필수입니다.")
-    @Schema(description = "소셜 로그인 임시 토큰", example = "temp-token-abc123", requiredMode = Schema.RequiredMode.REQUIRED)
     private String tempToken;
 
-    @NotBlank(message = "닉네임은 필수입니다.")
-    @Size(min = 2, max = 20, message = "닉네임은 2~20자 사이여야 합니다.")
-    @Schema(description = "닉네임 (2~20자)", example = "홍길동", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String nickname;
-
-    @NotNull(message = "서비스 이용약관 동의는 필수입니다.")
-    @Schema(description = "서비스 이용약관 동의 여부", example = "true", requiredMode = Schema.RequiredMode.REQUIRED)
-    private Boolean agreeTermsOfService;
-
-    @NotNull(message = "개인정보 처리방침 동의는 필수입니다.")
-    @Schema(description = "개인정보 처리방침 동의 여부", example = "true", requiredMode = Schema.RequiredMode.REQUIRED)
-    private Boolean agreePrivacyPolicy;
-
-    @Schema(description = "마케팅 수신 동의 여부 (선택)", example = "false")
-    private Boolean agreeMarketingConsent = false;
+    /**
+     * 생년월일 (필수)
+     */
+    @Schema(description = "생년월일", example = "1998-08-07", required = true)
+    @NotNull(message = "생년월일은 필수입니다.")
+    @Past(message = "생년월일은 과거 날짜여야 합니다.")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate birthDate;
 
     /**
-     * 테스트용 생성자입니다.
+     * 직업 유형 (필수)
      */
-    public SocialSignupRequestDto(
-            String tempToken,
-            String nickname,
-            Boolean agreeTermsOfService,
-            Boolean agreePrivacyPolicy,
-            Boolean agreeMarketingConsent
-    ) {
-        this.tempToken = tempToken;
-        this.nickname = nickname;
-        this.agreeTermsOfService = agreeTermsOfService;
-        this.agreePrivacyPolicy = agreePrivacyPolicy;
-        this.agreeMarketingConsent = agreeMarketingConsent;
+    @Schema(description = "직업 유형", example = "EMPLOYEE", required = true)
+    @NotNull(message = "직업 유형은 필수입니다.")
+    private JobType jobType;
+
+    /**
+     * 기타 직업 입력 (jobType이 OTHER인 경우에만 필수)
+     * jobType 드롭다운에 없는 직업을 직접 입력
+     */
+    @Schema(description = "기타 직업 (jobType이 OTHER인 경우에만 필수)", example = "유튜버", required = false)
+    @Size(max = 100, message = "기타 직업은 최대 100자까지 입력 가능합니다.")
+    private String jobDetail;
+
+    /**
+     * jobType이 OTHER인 경우 jobDetail 필수 검증
+     *
+     * @return 유효하면 true
+     */
+    public boolean isValid() {
+        // jobType이 OTHER인 경우에만 jobDetail 필수
+        if (jobType == JobType.OTHER) {
+            return jobDetail != null && !jobDetail.trim().isEmpty();
+        }
+        // jobType이 OTHER가 아니면 jobDetail은 무시 (null이어도 됨)
+        return true;
     }
 }
