@@ -1,5 +1,6 @@
 package com.aid.train.backend.websocket.handler;
 
+import com.aid.train.backend.websocket.service.GptSessionManager;
 import com.aid.train.backend.websocket.service.SessionCoordinator;
 import com.aid.train.backend.websocket.service.WebRtcStateManager;
 import com.google.gson.JsonObject;
@@ -43,6 +44,7 @@ public class AudioHandler extends AbstractWebSocketHandler {
 
     private final SessionCoordinator sessionCoordinator;
     private final WebRtcStateManager webRtcStateManager;
+    private final GptSessionManager gptSessionManager;
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
@@ -139,7 +141,7 @@ public class AudioHandler extends AbstractWebSocketHandler {
             }
 
             // 3. gpt 세션 확인 후 큐에 저장
-            if (!sessionCoordinator.hasGptSession(sessionId)) {
+            if (!gptSessionManager.hasGptSession(sessionId)) {
                 log.warn("AudioHandler - GPT 세션 준비 중, 큐에 저장 - sessionId: {}", sessionId);
                 sessionCoordinator.queueAudio(sessionId, audioData);
                 return;
@@ -174,7 +176,7 @@ public class AudioHandler extends AbstractWebSocketHandler {
                 sessionId, status);
 
         try {
-            // SessionCoordinator를 통해 전체 종료
+            // SessionCoordinator 를 통해 전체 종료
             sessionCoordinator.terminateSession(sessionId);
 
             log.info("AudioHandler - 세션 종료 완료 - sessionId: {}", sessionId);
