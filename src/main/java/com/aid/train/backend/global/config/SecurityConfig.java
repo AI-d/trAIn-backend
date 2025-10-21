@@ -83,6 +83,9 @@ public class SecurityConfig {
                                 // Actuator (헬스체크 등)
                                 "/actuator/**"
                         ).permitAll()
+                        .requestMatchers("/test/").permitAll()    // 테스트용 엔드포인트 허용 (필요시 제거)
+                        .requestMatchers("/ws/").permitAll()          // WebSocket 전체 허용
+                        .requestMatchers("/api/**").permitAll()    // 인증 API 허용
                         // --- Authenticated API: 인증된 사용자만 접근 허용 ---
                         .anyRequest().authenticated()
                 )
