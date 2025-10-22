@@ -78,7 +78,7 @@ public class Scenario
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    public enum Voice { ONYX, ECHO, NOVA }
+    public enum Voice {  ALLOY, ASH, BALLAD, CORAL, ECHO, SAGE, SHIMMER, VERSE, MARIN, CEDAR  }
     public enum Difficulty { EASY, MEDIUM, HARD }
     public enum Category { WORK, RELATIONSHIP, FAMILY, FRIEND }
     public enum Status { DRAFT, PUBLISHED, DELETED }

@@ -1,8 +1,8 @@
 package com.aid.train.backend.websocket.dto.server;
 
 import lombok.*;
+import org.springframework.web.socket.WebSocketSession;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,7 +21,10 @@ public class GptSession {
     @Builder.Default
     private AtomicBoolean isReady = new AtomicBoolean(false);
 
-    private Object gptRealtimeSession;// 실제 GPT Realtime API 세션 객체
+    // 실제 GPT Realtime API 세션 객체
+    private Object gptRealtimeSession;
+
+    private WebSocketSession webSocketSession;
 
     @Builder.Default
     private List<String> conversationHistory = new ArrayList<>();

@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 public record RealtimeSession (
         String model,
         String instructions,
-        String voice,
-        String locale
+        String voice
 ) {
 }
