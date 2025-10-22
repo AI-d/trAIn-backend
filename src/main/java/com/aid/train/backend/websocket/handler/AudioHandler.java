@@ -54,9 +54,12 @@ public class AudioHandler extends AbstractWebSocketHandler {
 
         if ("SESSION_INIT".equals(data.get("type").getAsString())) {
             Long scenarioId = data.get("scenarioId").getAsLong();
+            // session_init 메세지로 부터 유저 식별정보 받아오기
+            // 식별자로 유저 ID 조회
 
             // 시나리오 ID를 세션 속성에 저장
             session.getAttributes().put("scenarioId", scenarioId);
+            // 유저 ID를 세션 속성에 저장
 
 
             // 세션 초기화 (GPT 연결, DialogueSession 생성 등)
