@@ -21,6 +21,7 @@ import com.aid.train.backend.domain.verification.repository.OneTimeCodeRepositor
 import com.aid.train.backend.global.exception.TrainException;
 import com.aid.train.backend.global.exception.enums.ErrorCode;
 import com.aid.train.backend.global.security.jwt.JwtTokenProvider;
+import com.aid.train.backend.global.util.LogMaskingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -37,7 +38,7 @@ import java.util.UUID;
 /**
  * 인증(Authentication) 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
  * 로컬 로그인, 토큰 발급/갱신, 로그아웃, 일회용 코드 교환 기능을 제공합니다.
- *
+ * <p>
  * **DB 기반 일회용 코드 관리:**
  * Redis 대신 OneTimeCode 테이블을 사용하여 일회용 코드를 관리합니다.
  *
@@ -72,6 +73,11 @@ public class AuthService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new TrainException(ErrorCode.LOGIN_FAILED);
         }
+
+        if (passwordEncoder.upgradeEncoding(user.getPassword())) {
+            user.updatePassword(passwordEncoder.encode(request.getPassword()));
+        }
+
         if (!user.isEmailVerified()) {
             throw new TrainException(ErrorCode.USER_EMAIL_NOT_VERIFIED);
         }
@@ -164,7 +170,7 @@ public class AuthService {
                     .build();
         } else {
             // --- 신규 회원인 경우 ---
-            log.info("신규 소셜 사용자 확인 ({}). Email: {}", provider, userInfo.email());
+            log.info("신규 소셜 사용자 확인 ({}). Email: {}", provider, LogMaskingUtil.maskEmail(userInfo.email()));
 
             String pendingToken = jwtTokenProvider.generateSocialSignupPendingToken(
                     provider.name(), userInfo.providerId(), userInfo.email(), userInfo.name());
@@ -180,7 +186,7 @@ public class AuthService {
             pendingSocialUserRepository.save(pendingUser);
 
             log.info("신규 소셜 사용자 대기 토큰 생성 완료. Email: {}, Provider: {}",
-                    userInfo.email(), provider);
+                    LogMaskingUtil.maskEmail(userInfo.email()), provider);
 
             return SocialCallbackResponseDto.builder()
                     .isNewUser(true)
@@ -215,7 +221,7 @@ public class AuthService {
         oneTimeCodeRepository.save(oneTimeCode);
 
         log.debug("일회용 코드 생성 및 DB 저장 완료. Code: {}, User ID: {}, 만료시간: {}분",
-                code, userId, ONE_TIME_CODE_EXPIRY_MINUTES);
+                LogMaskingUtil.maskToken(code), userId, ONE_TIME_CODE_EXPIRY_MINUTES);
 
         return code;
     }
@@ -231,16 +237,16 @@ public class AuthService {
     public String exchangeCodeForAccessToken(String code) {
         OneTimeCode oneTimeCode = oneTimeCodeRepository.findByCode(code)
                 .orElseThrow(() -> {
-                    log.warn("일회용 코드 교환 실패 - 존재하지 않는 코드. Code prefix: {}",
-                            code.length() >= 8 ? code.substring(0, 8) + "..." : code);
+                    log.warn("일회용 코드 교환 실패 - 존재하지 않는 코드. Code: {}",
+                            LogMaskingUtil.maskToken(code));
                     return new TrainException(ErrorCode.INVALID_ONE_TIME_CODE);
                 });
 
         // 만료 또는 사용 여부 확인
         if (oneTimeCode.isExpired() || oneTimeCode.getUsed()) {
             oneTimeCodeRepository.delete(oneTimeCode);
-            log.warn("일회용 코드 교환 실패 - 만료되거나 이미 사용된 코드. Code prefix: {}",
-                    code.substring(0, 8) + "...");
+            log.warn("일회용 코드 교환 실패 - 만료/이미 사용된 코드. Code: {}",
+                    LogMaskingUtil.maskToken(code));
             throw new TrainException(ErrorCode.INVALID_ONE_TIME_CODE);
         }
 

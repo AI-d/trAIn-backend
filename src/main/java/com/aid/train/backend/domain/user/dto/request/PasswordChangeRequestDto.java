@@ -81,4 +81,17 @@ public class PasswordChangeRequestDto {
     public boolean isSameAsCurrentPassword() {
         return currentPassword != null && currentPassword.equals(newPassword);
     }
+
+    /**
+     * 로그 출력 시 민감정보(현재 비밀번호, 새 비밀번호)를 마스킹합니다.
+     * 디버깅 중 toString() 호출로 인해 정보가 유출되지 않도록 보호합니다.
+     */
+    @Override
+    public String toString() {
+        return "PasswordChangeRequestDto(" +
+                "currentPassword=****" +
+                ", newPassword=****" +
+                ", confirmNewPassword=****" +
+                ")";
+    }
 }
