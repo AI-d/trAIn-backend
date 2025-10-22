@@ -86,8 +86,8 @@ public class AuthService {
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .user(user)
-                .token(tokens.getRefreshToken())
-                .expiryDate(jwtTokenProvider.getExpiryDateTimeFromToken(tokens.getRefreshToken()))
+                .token(tokens.refreshToken())
+                .expiryDate(jwtTokenProvider.getExpiryDateTimeFromToken(tokens.refreshToken()))
                 .build();
         refreshTokenRepository.save(refreshToken);
 
@@ -100,8 +100,8 @@ public class AuthService {
                 .userId(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
-                .accessToken(tokens.getAccessToken())
-                .refreshToken(tokens.getRefreshToken())
+                .accessToken(tokens.accessToken())
+                .refreshToken(tokens.refreshToken())
                 .build();
     }
 
@@ -125,11 +125,11 @@ public class AuthService {
                 .orElseThrow(() -> new TrainException(ErrorCode.USER_NOT_FOUND));
 
         JwtTokenProvider.JwtResponse newTokens = jwtTokenProvider.generateTokens(userId, email);
-        saveRefreshToken(user, newTokens.getRefreshToken());
+        saveRefreshToken(user, newTokens.refreshToken());
 
         return TokenRefreshResponseDto.builder()
-                .accessToken(newTokens.getAccessToken())
-                .refreshToken(newTokens.getRefreshToken())
+                .accessToken(newTokens.accessToken())
+                .refreshToken(newTokens.refreshToken())
                 .build();
     }
 
@@ -378,7 +378,7 @@ public class AuthService {
         pendingSocialUserRepository.delete(pendingUser);
 
         JwtTokenProvider.JwtResponse tokens = jwtTokenProvider.generateTokens(newUser.getId(), newUser.getEmail());
-        saveRefreshToken(newUser, tokens.getRefreshToken());
+        saveRefreshToken(newUser, tokens.refreshToken());
 
         log.info("소셜 회원가입 및 로그인 완료. User ID: {}, Email: {}", newUser.getId(), newUser.getEmail());
 
@@ -386,8 +386,8 @@ public class AuthService {
                 .userId(newUser.getId())
                 .email(newUser.getEmail())
                 .name(newUser.getName())
-                .accessToken(tokens.getAccessToken())
-                .refreshToken(tokens.getRefreshToken())
+                .accessToken(tokens.accessToken())
+                .refreshToken(tokens.refreshToken())
                 .build();
     }
 }
