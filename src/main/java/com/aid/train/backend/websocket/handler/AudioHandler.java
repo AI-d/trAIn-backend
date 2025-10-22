@@ -68,7 +68,8 @@ public class AudioHandler extends AbstractWebSocketHandler {
 
         } else if("speech.end".equals(data.get("type").getAsString())) {
             log.info("speech.end 수신 - sessionId: {}", sessionId);
-            //sessionCoordinator.commitUserAudio(sessionId);
+            // Manual 모드에서는 명시적으로 commit과 response.create를 보내야 함
+            sessionCoordinator.commitAndRequestResponse(sessionId);
         }
 
 

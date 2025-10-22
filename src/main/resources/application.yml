@@ -130,6 +130,9 @@ server:
     include-binding-errors: always
   tomcat:
     max-swallow-size: 10485760
+    # WebSocket 설정
+    max-http-header-size: 65536
+    connection-timeout: 60000
 
 
 # ===== JWT Configuration =====

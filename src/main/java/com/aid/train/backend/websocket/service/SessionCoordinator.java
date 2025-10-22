@@ -121,10 +121,16 @@ public class SessionCoordinator {
                     .encoding("pcm16")   // PCM 16-bit
                     .build();
 
+            // Turn Detection을 Manual 모드로 설정 (Server VAD 비활성화)
+            RealtimeSession.TurnDetection turnDetection = RealtimeSession.TurnDetection.builder()
+                    .type(null)  // null = Manual 모드
+                    .build();
+            
             RealtimeSession session = RealtimeSession.builder()
-                    .model("gpt-4o-realtime-preview-2025-10-15")
+                    .model("gpt-4o-realtime-preview-2024-10-01")
                     .instructions(instructions)
                     .voice(scenario.getVoice().name().toLowerCase())
+                    .turnDetection(turnDetection)  // Manual 모드 설정
                     .build();
 
             SessionInitMessage message = SessionInitMessage.makePrompt(session);
@@ -292,17 +298,12 @@ public class SessionCoordinator {
                 case "response.audio.delta":
                     log.debug("오디오 델타 수신 - sessionId: {}", sessionId);
                     if (json.has("delta")) {
-                    String base64Audio = json.get("delta").getAsString();
-                    byte[] audioData = Base64.getDecoder().decode(base64Audio);
-
-                    WebSocketSession wsSession = wsSessionManager.getSession(sessionId);
-                    if (wsSession != null && wsSession.isOpen()) {
-                        wsSession.sendMessage(new BinaryMessage(audioData));
-                        webRtcStateManager.recordAudioSent(sessionId, audioData.length);
-                        log.debug("오디오 클라이언트 전송 - {} bytes", audioData.length);
+                        String base64Audio = json.get("delta").getAsString();
+                        
+                        // 큰 오디오 델타는 청크로 나눠서 전송
+                        sendAudioDeltaInChunks(sessionId, base64Audio);
                     }
                     break;
-                }
                 case "response.audio_transcript.delta" :
                     if (json.has("delta")) {
                         String transcript = json.get("delta").getAsString();
@@ -377,6 +378,60 @@ public class SessionCoordinator {
 
         } catch (Exception e) {
             log.error("AI 음성 전송 실패 - sessionId: {}", sessionId, e);
+        }
+    }
+
+    /**
+     * 큰 오디오 델타를 청크로 나눠서 전송합니다.
+     * 
+     * GPT로부터 받은 Base64 인코딩된 오디오 데이터가 너무 크면
+     * 여러 개의 작은 청크로 나눠서 클라이언트에 전송합니다.
+     * 
+     * @param sessionId 대화 세션 ID
+     * @param base64Audio Base64 인코딩된 오디오 데이터
+     */
+    private void sendAudioDeltaInChunks(String sessionId, String base64Audio) {
+        try {
+            WebSocketSession wsSession = wsSessionManager.getSession(sessionId);
+            if (wsSession == null || !wsSession.isOpen()) {
+                log.error("WebSocket 세션 없음 - sessionId: {}", sessionId);
+                return;
+            }
+
+            // Base64 디코딩
+            byte[] audioData = Base64.getDecoder().decode(base64Audio);
+            
+            // 청크 크기: 32KB (조정 가능)
+            final int CHUNK_SIZE = 32 * 1024;
+            
+            if (audioData.length <= CHUNK_SIZE) {
+                // 작은 데이터는 그냥 전송
+                wsSession.sendMessage(new BinaryMessage(audioData));
+                webRtcStateManager.recordAudioSent(sessionId, audioData.length);
+                log.debug("오디오 클라이언트 전송 - {} bytes", audioData.length);
+            } else {
+                // 큰 데이터는 청크로 나눠서 전송
+                int totalChunks = (int) Math.ceil((double) audioData.length / CHUNK_SIZE);
+                log.debug("오디오 청크 분할 전송 시작 - 총 크기: {} bytes, 청크 수: {}", 
+                         audioData.length, totalChunks);
+                
+                for (int i = 0; i < audioData.length; i += CHUNK_SIZE) {
+                    int end = Math.min(i + CHUNK_SIZE, audioData.length);
+                    byte[] chunk = new byte[end - i];
+                    System.arraycopy(audioData, i, chunk, 0, chunk.length);
+                    
+                    wsSession.sendMessage(new BinaryMessage(chunk));
+                    webRtcStateManager.recordAudioSent(sessionId, chunk.length);
+                    
+                    log.debug("오디오 청크 전송 - {}/{}, {} bytes", 
+                             (i / CHUNK_SIZE) + 1, totalChunks, chunk.length);
+                }
+                
+                log.debug("오디오 청크 분할 전송 완료 - sessionId: {}", sessionId);
+            }
+            
+        } catch (Exception e) {
+            log.error("오디오 델타 전송 실패 - sessionId: {}", sessionId, e);
         }
     }
 
@@ -492,7 +547,47 @@ public class SessionCoordinator {
             gptSessionManager.sendToGpt(sessionId, responseCreate);
 
         } catch(Exception e) {
+            log.error("초기 응답 요청 실패 - sessionId: {}", sessionId, e);
+        }
+    }
 
+    /**
+     * Manual 모드에서 사용자 음성 입력 완료 처리
+     * 
+     * 1. input_audio_buffer.commit: 지금까지 받은 음성을 하나의 턴으로 확정
+     * 2. response.create: GPT에게 응답 생성 요청
+     */
+    public void commitAndRequestResponse(String sessionId) {
+        try {
+            GptSession gptSession = gptSessionManager.getGptSession(sessionId);
+            if(gptSession == null) {
+                log.error("gpt 세션 없음 - sessionId: {}", sessionId);
+                return;
+            }
+
+            log.info("사용자 음성 commit 및 응답 요청 - sessionId: {}", sessionId);
+            
+            // 1. input_audio_buffer.commit
+            String commitMessage = """
+                    {
+                        "type": "input_audio_buffer.commit"
+                    }
+                    """;
+            gptSessionManager.sendToGpt(sessionId, commitMessage);
+            
+            // 2. response.create
+            String responseCreate = """
+                    {
+                        "type": "response.create",
+                        "response": {
+                            "modalities": ["audio", "text"]
+                        }
+                    }
+                    """;
+            gptSessionManager.sendToGpt(sessionId, responseCreate);
+
+        } catch(Exception e) {
+            log.error("commit 및 응답 요청 실패 - sessionId: {}", sessionId, e);
         }
     }
 
