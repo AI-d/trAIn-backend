@@ -25,8 +25,9 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     /**
-     *  애플리케이션에서 발생하는 커스텁 예외들을 처리합니다.
-     *  @ExceptionHandler - 애플리케이션에서 throw된 에러들을 처리할 예외클래스
+     * 애플리케이션에서 발생하는 커스텁 예외들을 처리합니다.
+     *
+     * @ExceptionHandler - 애플리케이션에서 throw된 에러들을 처리할 예외클래스
      */
     @ExceptionHandler(TrainException.class)
     public ResponseEntity<ErrorResponse> handleTrainException(TrainException e, HttpServletRequest req) {
@@ -47,7 +48,8 @@ public class GlobalExceptionHandler {
 
     /**
      * 유효성 검사 실패 에러를 처리합니다.
-     *  @Valid 유효성 검사 실패 처리 (400)
+     *
+     * @Valid 유효성 검사 실패 처리 (400)
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
@@ -81,7 +83,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentialsException(BadCredentialsException e, HttpServletRequest request) {
         log.warn("로그인 실패: {}", e.getMessage());
-        return createErrorResponse(ErrorCode.INVALID_PASSWORD, ErrorCode.INVALID_PASSWORD.getMessage(), request);
+        return createErrorResponse(ErrorCode.LOGIN_FAILED, ErrorCode.LOGIN_FAILED.getMessage(), request);
     }
 
     /**
@@ -104,9 +106,10 @@ public class GlobalExceptionHandler {
 
     /**
      * 공통 에러 응답을 생성합니다.
+     *
      * @param errorCode - 400, 500 ... 등의 에러코드
-     * @param message - 에러 발생 원인 메세지
-     * @param req - 현재 HTTP 요청 정보
+     * @param message   - 에러 발생 원인 메세지
+     * @param req       - 현재 HTTP 요청 정보
      * @return ResponseEntity - 에러 응답을 담은 객체
      */
     private ResponseEntity<ErrorResponse> createErrorResponse(ErrorCode errorCode, String message, HttpServletRequest req) {

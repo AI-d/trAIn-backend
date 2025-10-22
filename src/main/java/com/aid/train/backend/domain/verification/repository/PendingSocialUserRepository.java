@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
- * PendingSocialUser 엔티티의 Repository 인터페이스입니다.
- * 소셜 로그인 임시 사용자의 조회, 저장, 삭제 등의 데이터 접근 기능을 제공합니다.
+ * PendingSocialUser 엔티티 Repository
+ * 소셜 회원가입 완료 대기 관리 핵심 기능
  *
  * @author 왕택준
  * @since 1.0.0
@@ -21,79 +21,56 @@ import java.util.Optional;
 @Repository
 public interface PendingSocialUserRepository extends JpaRepository<PendingSocialUser, Long> {
 
-    /**
-     * 임시 토큰으로 대기 중인 소셜 사용자를 조회합니다.
-     *
-     * @param tempToken 임시 토큰
-     * @return 임시 소셜 사용자 Optional
-     */
-    Optional<PendingSocialUser> findByTempToken(String tempToken);
+    // ===== 소셜 회원가입 완료 핵심 기능 =====
 
     /**
-     * 제공자와 제공자 ID로 대기 중인 소셜 사용자를 조회합니다.
-     *
-     * @param provider   소셜 제공자
-     * @param providerId 제공자의 사용자 고유 ID
-     * @return 임시 소셜 사용자 Optional
+     * 대기 토큰으로 조회
+     */
+    Optional<PendingSocialUser> findByPendingToken(String pendingToken);
+
+    /**
+     * 소셜 제공자와 제공자 ID로 조회 (중복 방지)
      */
     Optional<PendingSocialUser> findByProviderAndProviderId(Provider provider, String providerId);
 
     /**
-     * 제공자와 제공자 ID로 대기 중인 소셜 사용자 존재 여부를 확인합니다.
-     *
-     * @param provider   소셜 제공자
-     * @param providerId 제공자의 사용자 고유 ID
-     * @return 존재하면 true, 아니면 false
+     * 유효한 미사용 토큰 조회 (만료되지 않고 미사용)
+     */
+    @Query("SELECT psu FROM PendingSocialUser psu WHERE psu.pendingToken = :token " +
+            "AND psu.expiryDate > :now AND psu.used = false")
+    Optional<PendingSocialUser> findValidToken(@Param("token") String token, @Param("now") LocalDateTime now);
+
+    // ===== 중복 방지 =====
+
+    /**
+     * 소셜 계정 대기 토큰 존재 여부 확인
      */
     boolean existsByProviderAndProviderId(Provider provider, String providerId);
 
     /**
-     * 특정 기간 이전에 생성된 임시 사용자를 벌크 삭제합니다.
-     * 스케줄러에서 주기적으로 실행 (1시간 경과 데이터 삭제)
-     *
-     * @param createdAt 기준 생성 일시
-     * @return 삭제된 임시 사용자 개수
-     * @Modifying을 사용하여 단일 DELETE 쿼리로 실행
+     * 유효한 미사용 토큰 존재 여부 확인 (중복 방지)
+     */
+    @Query("SELECT COUNT(psu) > 0 FROM PendingSocialUser psu WHERE psu.provider = :provider " +
+            "AND psu.providerId = :providerId AND psu.expiryDate > :now AND psu.used = false")
+    boolean hasValidUnusedToken(@Param("provider") Provider provider, @Param("providerId") String providerId,
+                                @Param("now") LocalDateTime now);
+
+    // ===== 토큰 정리 =====
+
+    /**
+     * 특정 시간 이전에 만료되었거나, 이미 사용된 임시 소셜 사용자 정보를 모두 삭제합니다. (벌크 삭제)
      */
     @Modifying
-    @Query("DELETE FROM PendingSocialUser psu WHERE psu.createdAt < :createdAt")
-    int bulkDeleteOldPendingUsers(@Param("createdAt") LocalDateTime createdAt);
+    @Query("DELETE FROM PendingSocialUser psu WHERE psu.expiryDate < :threshold OR psu.used = true")
+    int deleteExpiredOrUsedTokens(@Param("threshold") LocalDateTime threshold);
+    
+    // ===== 재요청 제한 =====
 
     /**
-     * 완료된 임시 사용자를 벌크 삭제합니다.
-     *
-     * @return 삭제된 임시 사용자 개수
+     * 최근 N분 내 요청 토큰 개수 (스팸 방지)
      */
-    @Modifying
-    @Query("DELETE FROM PendingSocialUser psu WHERE psu.isCompleted = true")
-    int bulkDeleteCompletedUsers();
-
-    /**
-     * 특정 기간 이전에 생성된 임시 사용자를 삭제합니다.
-     * 스케줄러에서 주기적으로 실행 (1시간 경과 데이터 삭제)
-     *
-     * @param createdAt 기준 생성 일시
-     * @return 삭제된 임시 사용자 개수
-     * @deprecated bulkDeleteOldPendingUsers() 사용을 권장합니다 (성능 향상)
-     */
-    @Deprecated
-    long deleteByCreatedAtBefore(LocalDateTime createdAt);
-
-    /**
-     * 완료된 임시 사용자를 삭제합니다.
-     *
-     * @param isCompleted 완료 여부
-     * @return 삭제된 임시 사용자 개수
-     * @deprecated bulkDeleteCompletedUsers() 사용을 권장합니다 (성능 향상)
-     */
-    @Deprecated
-    long deleteByIsCompleted(Boolean isCompleted);
-
-    /**
-     * 임시 토큰 존재 여부를 확인합니다.
-     *
-     * @param tempToken 임시 토큰
-     * @return 존재하면 true, 아니면 false
-     */
-    boolean existsByTempToken(String tempToken);
+    @Query("SELECT COUNT(psu) FROM PendingSocialUser psu WHERE psu.provider = :provider " +
+            "AND psu.providerId = :providerId AND psu.createdAt > :after")
+    long countRecentTokens(@Param("provider") Provider provider, @Param("providerId") String providerId,
+                           @Param("after") LocalDateTime after);
 }

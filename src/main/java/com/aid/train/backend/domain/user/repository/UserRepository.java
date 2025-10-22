@@ -1,17 +1,20 @@
 package com.aid.train.backend.domain.user.repository;
 
 import com.aid.train.backend.domain.user.entity.User;
+import com.aid.train.backend.domain.user.enums.Provider;
 import com.aid.train.backend.domain.user.enums.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 /**
- * User 엔티티의 Repository 인터페이스입니다.
- * 사용자 조회, 저장, 삭제 등의 데이터 접근 기능을 제공합니다.
+ * User 엔티티 Repository
+ * 핵심 사용자 관리 기능만 제공
  *
  * @author 왕택준
  * @since 1.0.0
@@ -19,55 +22,57 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    /**
-     * 이메일로 사용자를 조회합니다.
-     *
-     * @param email 조회할 이메일 주소
-     * @return 사용자 Optional
-     */
-    Optional<User> findByEmail(String email);
+    // ===== 로그인/회원가입 핵심 기능 =====
 
     /**
-     * 이메일로 사용자 존재 여부를 확인합니다.
-     *
-     * @param email 확인할 이메일 주소
-     * @return 존재하면 true, 아니면 false
+     * 이메일과 제공자로 사용자 조회
+     * 로그인, 중복 체크용
      */
-    boolean existsByEmail(String email);
+    Optional<User> findByEmailAndPrimaryProvider(String email, Provider primaryProvider);
 
     /**
-     * 특정 상태의 사용자 목록을 조회합니다.
-     *
-     * @param status 사용자 상태
-     * @return 사용자 목록
+     * 활성 사용자 조회 (탈퇴하지 않은 사용자)
      */
-    List<User> findByStatus(UserStatus status);
+    @Query("SELECT u FROM User u WHERE u.email = :email AND u.primaryProvider = :primaryProvider AND u.deletedAt IS NULL")
+    Optional<User> findActiveUser(@Param("email") String email, @Param("primaryProvider") Provider primaryProvider);
 
     /**
-     * 특정 기간 동안 업데이트되지 않은 활성 사용자를 조회합니다.
-     * 휴면 계정 전환용 (1년 미접속)
-     *
-     * @param status    사용자 상태
-     * @param updatedAt 기준 일시
-     * @return 사용자 목록
+     * 로그인 가능한 사용자 조회 (ACTIVE, INACTIVE만)
      */
-    List<User> findByStatusAndUpdatedAtBefore(UserStatus status, LocalDateTime updatedAt);
+    @Query("SELECT u FROM User u WHERE u.email = :email AND u.primaryProvider = :primaryProvider " +
+            "AND u.status IN ('ACTIVE', 'INACTIVE') AND u.deletedAt IS NULL")
+    Optional<User> findLoginableUser(@Param("email") String email, @Param("primaryProvider") Provider primaryProvider);
+
+    // ===== 이메일 인증 관련 =====
 
     /**
-     * 이메일 인증이 완료되지 않은 사용자를 조회합니다.
-     *
-     * @param emailVerified 이메일 인증 여부
-     * @return 사용자 목록
+     * 미인증 로컬 사용자 조회 (이메일 인증 대상)
      */
-    List<User> findByEmailVerified(Boolean emailVerified);
+    @Query("SELECT u FROM User u WHERE u.email = :email AND u.primaryProvider = 'LOCAL' " +
+            "AND u.emailVerified = false AND u.deletedAt IS NULL")
+    Optional<User> findUnverifiedLocalUser(@Param("email") String email);
+
+    // ===== 중복 체크 =====
 
     /**
-     * 특정 기간 이전에 탈퇴한 사용자를 조회합니다.
-     * 개인정보 완전 삭제용 (탈퇴 후 30일)
-     *
-     * @param status    사용자 상태
-     * @param deletedAt 기준 일시
-     * @return 사용자 목록
+     * 이메일 중복 체크 (제공자별)
      */
-    List<User> findByStatusAndDeletedAtBefore(UserStatus status, LocalDateTime deletedAt);
+    boolean existsByEmailAndPrimaryProvider(String email, Provider primaryProvider);
+
+    // ===== 스케줄러용 (휴면 전환) =====
+
+    /**
+     * 1년 미접속 사용자를 휴면 상태로 전환합니다. (벌크 업데이트)
+     */
+    @Modifying
+    @Query("UPDATE User u SET u.status = 'INACTIVE' WHERE u.lastLoginAt < :threshold " +
+            "AND u.status = 'ACTIVE' AND u.deletedAt IS NULL")
+    int convertToInactiveStatus(@Param("threshold") LocalDateTime threshold);
+
+    /**
+     * 탈퇴 후 일정 기간이 지난 사용자를 DB에서 완전히 삭제합니다. (벌크 삭제)
+     */
+    @Modifying
+    @Query("DELETE FROM User u WHERE u.status = :status AND u.deletedAt < :threshold")
+    int deleteWithdrawnUsersBefore(@Param("status") UserStatus status, @Param("threshold") LocalDateTime threshold);
 }
