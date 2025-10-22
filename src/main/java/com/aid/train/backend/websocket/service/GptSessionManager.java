@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
@@ -97,6 +98,9 @@ public class GptSessionManager {
             // 1. WebSocket 클라이언트 생성
             StandardWebSocketClient client = new StandardWebSocketClient();
 
+
+            // 버퍼 크기 설정 추가 필요
+
             // 2. GPT 응답 핸들러 등록
             responseHandlers.put(sessionId, responseHandler);
 
@@ -171,7 +175,6 @@ public class GptSessionManager {
 
                                     String prompt = objectMapper.writeValueAsString(initMessage);
                                     synchronized(session) {
-                                        Thread.sleep(100);
                                         session.sendMessage(new TextMessage(prompt));
                                     }
 
@@ -192,6 +195,19 @@ public class GptSessionManager {
                         @Override
                         public void handleTransportError(WebSocketSession session, Throwable exception) {
                             log.error("GPT WebSocket 에러 - sessionId: {}", sessionId, exception);
+                        }
+
+                        @Override
+                        public void afterConnectionClosed(WebSocketSession session, CloseStatus status)  {
+                            // [필수 추가] 세션 종료 상태 로깅
+                            log.error("GPT WebSocket 연결 종료 감지 - sessionId: {}, Status: {} ({})",
+                                    sessionId, status.getCode(), status.getReason());
+
+                            // 맵에서 세션 제거 (GptSessionManager가 세션 생명주기를 책임지도록)
+                            gptSessionMap.remove(sessionId);
+
+                            // [선택 사항] SessionCoordinator를 통해 전체 세션 종료 로직 호출
+                            // sessionCoordinator.terminateSession(sessionId);
                         }
                     },
                     headers, // WebSocketHttpHeaders
