@@ -21,6 +21,13 @@ import java.io.IOException;
  * OAuth2 로그인 성공 처리 핸들러입니다.
  * 소셜 로그인 성공 후 사용자 정보를 처리하고 프론트엔드의 적절한 페이지로 리다이렉트합니다.
  *
+ * <p>
+ * **변경사항 (일회용 코드 방식 도입):**
+ * - 기존 회원: AccessToken 대신 일회용 코드를 URL 파라미터로 전달
+ * - 신규 회원: 기존과 동일하게 SOCIAL_SIGNUP_PENDING_TOKEN을 URL 파라미터로 전달
+ * - 보안 강화: URL에 실제 토큰이 노출되지 않고 일회용 코드만 노출됨
+ * </p>
+ *
  * @author 왕택준
  * @since 1.0.0
  */
@@ -61,12 +68,15 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             } else {
                 // --- 기존 회원 ---
                 log.info("기존 소셜 사용자. 메인 페이지로 리다이렉트. Email: {}", callbackResponse.getEmail());
-                // Refresh Token을 HttpOnly 쿠키에 저장
-                cookieUtil.addRefreshTokenCookie(response, callbackResponse.getRefreshToken());
-                // Access Token은 프론트엔드에서 처리하도록 쿼리 파라미터로 전달
+
+                // **핵심 변경사항**: AccessToken 대신 일회용 코드를 URL 파라미터로 전달
+                // 프론트엔드에서는 이 코드를 받아서 /api/v1/users/token/exchange API를 호출하여 AccessToken으로 교환해야 함
                 targetUrl = UriComponentsBuilder.fromUriString(frontendBaseUrl + "/")
-                        .queryParam("token", callbackResponse.getAccessToken())
+                        .queryParam("code", callbackResponse.getOneTimeCode())  // AccessToken → OneTimeCode 변경
                         .build().toUriString();
+
+                log.debug("기존 회원 일회용 코드 리다이렉트 URL 생성 완료. Code prefix: {}",
+                        callbackResponse.getOneTimeCode().substring(0, 8) + "...");
             }
 
             // 2. 결정된 URL로 리다이렉트

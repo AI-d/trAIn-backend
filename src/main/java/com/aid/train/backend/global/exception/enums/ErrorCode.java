@@ -33,6 +33,7 @@ public enum ErrorCode {
     VERIFICATION_CODE_INVALID("VERIFY_003", "인증 코드가 올바르지 않습니다.", 400),
     VERIFICATION_EMAIL_MISMATCH("VERIFY_004", "요청 이메일과 토큰의 이메일이 일치하지 않습니다.", 400),
     SOCIAL_SIGNUP_PENDING_TOKEN_INVALID("VERIFY_005", "소셜 회원가입 세션이 유효하지 않습니다.", 401),
+    INVALID_ONE_TIME_CODE("VERIFY_006", "일회용 코드가 유효하지 않거나 만료되었습니다.", 401),
     EMAIL_SEND_FAILED("SERVER_002", "이메일 발송에 실패했습니다.", 500),
 
     // ===== 사용자 관련 (404, 409) =====

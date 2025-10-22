@@ -4,6 +4,7 @@ import com.aid.train.backend.domain.user.enums.UserStatus;
 import com.aid.train.backend.domain.user.repository.RefreshTokenRepository;
 import com.aid.train.backend.domain.user.repository.UserRepository;
 import com.aid.train.backend.domain.verification.repository.EmailVerificationRepository;
+import com.aid.train.backend.domain.verification.repository.OneTimeCodeRepository;
 import com.aid.train.backend.domain.verification.repository.PendingSocialUserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class DataCleanupScheduler {
     private final EmailVerificationRepository emailVerificationRepository;
     private final PendingSocialUserRepository pendingSocialUserRepository;
     private final UserRepository userRepository;
+    private final OneTimeCodeRepository oneTimeCodeRepository;
 
     /**
      * 만료되었거나 사용 완료된 임시 데이터를 일괄 정리합니다.
@@ -53,8 +55,11 @@ public class DataCleanupScheduler {
             // 2. 만료되었거나 이미 사용된 PendingSocialUser 정보 삭제 (벌크 연산)
             int deletedPendingUsers = pendingSocialUserRepository.deleteExpiredOrUsedTokens(now);
 
-            log.info("[스케줄러] 일일 임시 데이터 정리 완료 | RefreshToken: {}건, EmailVerification: {}건, PendingSocialUser: {}건",
-                    deletedRefreshTokens, deletedEmailVerifications, deletedPendingUsers);
+            int deletedOneTimeCodes = oneTimeCodeRepository.deleteByExpiryDateBefore(now);
+
+            log.info("[스케줄러] 일일 임시 데이터 정리 완료 | RefreshToken: {}건, EmailVerification: {}건, PendingSocialUser: {}건, OneTimeCode: {}건",
+
+                    deletedRefreshTokens, deletedEmailVerifications, deletedPendingUsers, deletedOneTimeCodes);
         } catch (Exception e) {
             log.error("[스케줄러] 일일 임시 데이터 정리 중 오류 발생", e);
         }
