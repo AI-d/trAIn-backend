@@ -3,25 +3,10 @@ package com.aid.train.backend.domain.terms.entity;
 import com.aid.train.backend.domain.terms.enums.TermsType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.LocalDateTime;
 
 /**
  * 약관 본문 엔티티 클래스입니다.
  * 서비스 이용약관, 개인정보 처리방침, 마케팅 수신 동의 등의 약관을 저장합니다.
- *
- * <p>
- * 주요 기능:
- * <ul>
- *   <li>약관 유형별 관리 (필수/선택)</li>
- *   <li>약관 버전 관리</li>
- *   <li>약관 시행일 관리</li>
- *   <li>활성/비활성 상태 관리</li>
- * </ul>
- * </p>
  *
  * @author 왕택준
  * @since 1.0.0
@@ -46,7 +31,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-@EntityListeners(AuditingEntityListener.class)
 public class Terms {
 
     /**
@@ -92,13 +76,6 @@ public class Terms {
     private Boolean isRequired = true;
 
     /**
-     * 약관 시행일
-     * 이 날짜부터 약관이 효력을 발생함
-     */
-    @Column(name = "effective_date", nullable = false)
-    private LocalDateTime effectiveDate;
-
-    /**
      * 약관 활성화 여부
      * 최신 버전만 true로 설정
      * 이전 버전은 false (참조용으로 보관)
@@ -106,20 +83,6 @@ public class Terms {
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
-
-    /**
-     * 약관 생성 일시
-     */
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    /**
-     * 약관 수정 일시
-     */
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 
     /**
      * 약관을 비활성화합니다.
@@ -165,7 +128,6 @@ public class Terms {
                 .content(content)
                 .version(version)
                 .isRequired(type != TermsType.MARKETING_CONSENT) // 마케팅 동의는 선택, 나머지는 필수
-                .effectiveDate(LocalDateTime.now())
                 .isActive(true)
                 .build();
     }

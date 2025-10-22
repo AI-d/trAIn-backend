@@ -8,12 +8,11 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 /**
- * EmailVerification 엔티티의 Repository 인터페이스입니다.
- * 이메일 인증 OTP의 조회, 저장, 삭제 등의 데이터 접근 기능을 제공합니다.
+ * EmailVerification 엔티티 Repository
+ * 이메일 인증 핵심 기능만 제공
  *
  * @author 왕택준
  * @since 1.0.0
@@ -21,67 +20,61 @@ import java.util.Optional;
 @Repository
 public interface EmailVerificationRepository extends JpaRepository<EmailVerification, Long> {
 
+    // ===== 이메일 인증 핵심 기능 =====
+
     /**
-     * 이메일과 인증 코드로 인증 정보를 조회합니다.
-     *
-     * @param email 이메일 주소
-     * @param code  6자리 인증 코드
-     * @return 이메일 인증 Optional
+     * 인증 토큰으로 조회
+     */
+    Optional<EmailVerification> findByVerificationToken(String verificationToken);
+
+    /**
+     * 이메일과 OTP 코드로 조회 (이중 인증)
      */
     Optional<EmailVerification> findByEmailAndCode(String email, String code);
 
     /**
-     * 특정 이메일의 가장 최근 인증 정보를 조회합니다.
-     *
-     * @param email 이메일 주소
-     * @return 이메일 인증 Optional
+     * 사용자의 가장 최근 미인증 토큰 조회
      */
-    Optional<EmailVerification> findTopByEmailOrderByCreatedAtDesc(String email);
+    @Query("SELECT ev FROM EmailVerification ev WHERE ev.user.id = :userId AND ev.email = :email " +
+            "AND ev.isVerified = false ORDER BY ev.createdAt DESC LIMIT 1")
+    Optional<EmailVerification> findLatestUnverifiedByUserAndEmail(@Param("userId") Long userId, @Param("email") String email);
 
     /**
-     * 특정 이메일의 모든 인증 정보를 조회합니다.
-     *
-     * @param email 이메일 주소
-     * @return 이메일 인증 목록
+     * 유효한 미인증 토큰 존재 여부 확인 (중복 발송 방지)
      */
-    List<EmailVerification> findByEmail(String email);
+    @Query("SELECT COUNT(ev) > 0 FROM EmailVerification ev WHERE ev.user.id = :userId AND ev.email = :email " +
+            "AND ev.expiryDate > :now AND ev.isVerified = false")
+    boolean hasValidUnverifiedToken(@Param("userId") Long userId, @Param("email") String email, @Param("now") LocalDateTime now);
+
+    // ===== 인증 정리 =====
 
     /**
-     * 특정 이메일의 인증되지 않은 정보를 조회합니다.
-     *
-     * @param email      이메일 주소
-     * @param isVerified 인증 여부
-     * @return 이메일 인증 목록
-     */
-    List<EmailVerification> findByEmailAndIsVerified(String email, Boolean isVerified);
-
-    /**
-     * 특정 기간 이전에 생성된 인증 정보를 벌크 삭제합니다.
-     * 스케줄러에서 주기적으로 실행 (1시간 경과 데이터 삭제)
-     *
-     * @param createdAt 기준 생성 일시
-     * @return 삭제된 인증 정보 개수
-     * @Modifying을 사용하여 단일 DELETE 쿼리로 실행
+     * 사용자의 모든 이메일 인증 토큰 삭제 (계정 탈퇴시)
      */
     @Modifying
-    @Query("DELETE FROM EmailVerification ev WHERE ev.createdAt < :createdAt")
-    int bulkDeleteOldVerifications(@Param("createdAt") LocalDateTime createdAt);
+    @Query("DELETE FROM EmailVerification ev WHERE ev.user.id = :userId")
+    int deleteByUserId(@Param("userId") Long userId);
 
     /**
-     * 특정 기간 이전에 생성된 인증 정보를 삭제합니다.
-     * 스케줄러에서 주기적으로 실행 (1시간 경과 데이터 삭제)
-     *
-     * @param createdAt 기준 생성 일시
-     * @return 삭제된 인증 정보 개수
-     * @deprecated bulkDeleteOldVerifications() 사용을 권장합니다 (성능 향상)
+     * 특정 시간 이전에 만료된 토큰을 모두 삭제합니다. (벌크 삭제)
      */
-    @Deprecated
-    long deleteByCreatedAtBefore(LocalDateTime createdAt);
+    @Modifying
+    @Query("DELETE FROM EmailVerification ev WHERE ev.expiryDate < :threshold")
+    int deleteByExpiryDateBefore(@Param("threshold") LocalDateTime threshold);
 
     /**
-     * 특정 이메일의 인증 정보를 모두 삭제합니다.
-     *
-     * @param email 이메일 주소
+     * 인증 완료된 토큰 삭제 (원타임 토큰 정책)
      */
-    void deleteByEmail(String email);
+    @Modifying
+    @Query("DELETE FROM EmailVerification ev WHERE ev.isVerified = true")
+    int deleteVerifiedTokens();
+
+    // ===== 재발송 제한 =====
+
+    /**
+     * 최근 N분 내 발송 토큰 개수 (재발송 제한용)
+     */
+    @Query("SELECT COUNT(ev) FROM EmailVerification ev WHERE ev.user.id = :userId AND ev.email = :email " +
+            "AND ev.createdAt > :after")
+    long countRecentTokens(@Param("userId") Long userId, @Param("email") String email, @Param("after") LocalDateTime after);
 }
