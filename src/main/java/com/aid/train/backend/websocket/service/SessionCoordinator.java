@@ -122,15 +122,12 @@ public class SessionCoordinator {
                     .build();
 
             // Turn Detection을 Manual 모드로 설정 (Server VAD 비활성화)
-            RealtimeSession.TurnDetection turnDetection = RealtimeSession.TurnDetection.builder()
-                    .type(null)  // null = Manual 모드
-                    .build();
-            
+            // turnDetection을 null로 보내면 Manual 모드 (클라이언트가 직접 제어)
             RealtimeSession session = RealtimeSession.builder()
                     .model("gpt-4o-realtime-preview-2024-10-01")
                     .instructions(instructions)
                     .voice(scenario.getVoice().name().toLowerCase())
-                    .turnDetection(turnDetection)  // Manual 모드 설정
+                    .turnDetection(null)  // null = Manual 모드
                     .build();
 
             SessionInitMessage message = SessionInitMessage.makePrompt(session);

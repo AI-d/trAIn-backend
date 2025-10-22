@@ -14,18 +14,5 @@ public record RealtimeSession (
         String voice,
         
         @JsonProperty("turn_detection")
-        TurnDetection turnDetection
-) {
-    
-    /**
-     * Turn Detection 설정
-     * - null: Server VAD 사용 (기본값, GPT가 자동으로 음성 감지)
-     * - type: "server_vad": Server VAD 사용
-     * - type: null: Manual 모드 (클라이언트가 직접 제어)
-     */
-    @Builder
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record TurnDetection(
-            String type  // null이면 Manual 모드
-    ) {}
-}
+        Object turnDetection  // null이면 Manual 모드, Map이면 Server VAD 설정
+) {}
