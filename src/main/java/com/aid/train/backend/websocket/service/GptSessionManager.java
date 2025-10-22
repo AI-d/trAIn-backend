@@ -170,7 +170,10 @@ public class GptSessionManager {
                                     log.info("GPT 세션 초기화 완료 - 프롬프트 전송 시작");
 
                                     String prompt = objectMapper.writeValueAsString(initMessage);
-                                    session.sendMessage(new TextMessage(prompt));
+                                    synchronized(session) {
+                                        Thread.sleep(100);
+                                        session.sendMessage(new TextMessage(prompt));
+                                    }
 
                                     log.info("GPT 시나리오 전송 완료 - sessionId: {}", sessionId);
                                     return;
@@ -259,17 +262,25 @@ public class GptSessionManager {
      * @param sessionId 대화 세션 ID
      * @param message 전송할 JSON 메시지
      */
-    private void sendToGpt(String sessionId, String message) {
+    public void sendToGpt(String sessionId, String message) {
         GptSession session = gptSessionMap.get(sessionId);
         WebSocketSession gptWsSession = session.getWebSocketSession();
 
+        if (session == null) {
+            log.error("GPT 세션을 찾을 수 없음 - sessionId: {}", sessionId);
+            log.error("현재 등록된 세션들: {}", gptSessionMap.keySet());
+            return;
+        }
+
         if (gptWsSession == null || !gptWsSession.isOpen()) {
-            log.error("GPT 세션이 없거나 닫혀있음 - sessionId: {}", sessionId);
+            log.error("GPT WebSocket이 없거나 닫혀있음 - sessionId: {}", sessionId);
             return;
         }
 
         try {
-            gptWsSession.sendMessage(new TextMessage(message));
+            synchronized(gptWsSession) {
+                gptWsSession.sendMessage(new TextMessage(message));
+            }
         } catch (Exception e) {
             log.error("GPT 메시지 전송 실패 - sessionId: {}", sessionId, e);
         }

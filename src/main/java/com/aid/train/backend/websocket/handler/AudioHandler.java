@@ -67,8 +67,8 @@ public class AudioHandler extends AbstractWebSocketHandler {
             log.info("GPT 세션 생성 완료 - sessionId: {}", sessionId);
 
         } else if("speech.end".equals(data.get("type").getAsString())) {
-            log.info("speech.end 수신 - 음성 처리 시작: {}", sessionId);
-            sessionCoordinator.handleUserAudioComplete(sessionId);
+            log.info("speech.end 수신 - sessionId: {}", sessionId);
+            //sessionCoordinator.commitUserAudio(sessionId);
         }
 
 
@@ -129,13 +129,15 @@ public class AudioHandler extends AbstractWebSocketHandler {
 
             // WebRTC 확인
             if (!webRtcStateManager.isConnected(sessionId)) {
-                log.warn("WebRTC 연결 안됨");
+                log.warn("WebRTC 연결 안됨 - sessionId: {}", sessionId);
                 return;
             }
 
             GptSession gptSession = gptSessionManager.getGptSession(sessionId);
             if(gptSession == null) {
-                log.warn("gpt 세션 없음 - sessionId: {}", sessionId);
+                log.warn("gpt 세션 미준비, 큐에 저장 - sessionId: {}, ready: {}", sessionId, gptSession != null ? gptSession.getIsReady() : "false");
+                sessionCoordinator.queueAudio(sessionId, audioData);
+                return;
             }
 
             if(audioData == null || audioData.length == 0) {
@@ -143,9 +145,8 @@ public class AudioHandler extends AbstractWebSocketHandler {
                 return;
             }
 
-            // 오디오 데이터를 큐에 누적
-            gptSession.getAudioQueue().add(audioData);
-            log.info("AudioHandler - 오디오 데이터 큐에 추가 - sessionId: {}, 크기: {} bytes", sessionId, audioData.length);
+            // gpt에 음성 전송
+            sessionCoordinator.routeAudioToGpt(sessionId, audioData);
 
         } catch (Exception e) {
             log.error("오디오 처리 실패 - sessionId: {}", sessionId, e);
