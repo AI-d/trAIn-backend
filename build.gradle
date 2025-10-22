@@ -61,13 +61,15 @@ dependencies {
     // Mail
     implementation 'org.springframework.boot:spring-boot-starter-mail'
 
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
     // ===== Cache & Performance =====
     // Cache
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'com.github.ben-manes.caffeine:caffeine'
 
     // Redis
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    //implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     // ===== Monitoring & Operations =====
     // Actuator
@@ -101,7 +103,8 @@ dependencies {
 
     // ===== JSON Processing =====
     // Jackson (spring-boot-starter-web에 포함되어 있지만 명시적 추가)
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    //implementation 'com.fasterxml.jackson.core:jackson-databind'
+    //implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
     // ===== Development Tools =====
     // Devtools
@@ -111,6 +114,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'com.h2database:h2'
 }
 
 tasks.named('test') {

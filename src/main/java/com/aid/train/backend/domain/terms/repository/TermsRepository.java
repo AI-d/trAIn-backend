@@ -3,14 +3,17 @@ package com.aid.train.backend.domain.terms.repository;
 import com.aid.train.backend.domain.terms.entity.Terms;
 import com.aid.train.backend.domain.terms.enums.TermsType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Terms 엔티티의 Repository 인터페이스입니다.
- * 약관 본문의 조회, 저장, 삭제 등의 데이터 접근 기능을 제공합니다.
+ * Terms 엔티티 Repository
+ * 약관 관리 핵심 기능만 제공
  *
  * @author 왕택준
  * @since 1.0.0
@@ -18,58 +21,57 @@ import java.util.Optional;
 @Repository
 public interface TermsRepository extends JpaRepository<Terms, Long> {
 
+    // ===== 활성 약관 조회 (회원가입/동의 시 사용) =====
+
     /**
-     * 특정 타입의 활성화된 약관을 조회합니다.
-     * 회원가입 시 최신 약관 표시용
-     *
-     * @param type     약관 타입
-     * @param isActive 활성화 여부
-     * @return 약관 Optional
+     * 특정 타입의 활성 약관 조회
      */
     Optional<Terms> findByTypeAndIsActive(TermsType type, Boolean isActive);
 
     /**
-     * 특정 타입의 모든 활성화된 약관을 조회합니다.
-     *
-     * @param type     약관 타입
-     * @param isActive 활성화 여부
-     * @return 약관 목록
+     * 모든 활성 약관 조회 (회원가입 시 동의할 약관 목록)
      */
-    List<Terms> findAllByTypeAndIsActive(TermsType type, Boolean isActive);
+    @Query("SELECT t FROM Terms t WHERE t.isActive = true ORDER BY t.type")
+    List<Terms> findActiveTerms();
 
     /**
-     * 모든 활성화된 약관을 조회합니다.
-     * 회원가입 시 전체 약관 표시용
-     *
-     * @param isActive 활성화 여부
-     * @return 약관 목록
+     * 필수 약관만 조회 (필수 동의 확인용)
      */
-    List<Terms> findByIsActive(Boolean isActive);
+    @Query("SELECT t FROM Terms t WHERE t.isActive = true AND t.isRequired = true ORDER BY t.type")
+    List<Terms> findActiveRequiredTerms();
+
+    // ===== 약관 버전 관리 =====
 
     /**
-     * 특정 타입과 버전의 약관을 조회합니다.
-     *
-     * @param type    약관 타입
-     * @param version 약관 버전
-     * @return 약관 Optional
+     * 특정 타입의 특정 버전 약관 조회
      */
     Optional<Terms> findByTypeAndVersion(TermsType type, String version);
 
     /**
-     * 특정 타입의 모든 약관을 조회합니다.
-     * 약관 이력 조회용
-     *
-     * @param type 약관 타입
-     * @return 약관 목록
+     * 특정 타입의 모든 버전 조회 (최신순)
      */
-    List<Terms> findByType(TermsType type);
+    @Query("SELECT t FROM Terms t WHERE t.type = :type ORDER BY t.id DESC")
+    List<Terms> findAllVersionsByType(@Param("type") TermsType type);
+
+    // ===== 약관 활성화 관리 =====
 
     /**
-     * 특정 타입과 버전의 약관 존재 여부를 확인합니다.
-     *
-     * @param type    약관 타입
-     * @param version 약관 버전
-     * @return 존재하면 true, 아니면 false
+     * 특정 타입의 다른 모든 버전 비활성화 (새 버전 활성화 시)
+     */
+    @Modifying
+    @Query("UPDATE Terms t SET t.isActive = false WHERE t.type = :type AND t.id != :excludeId")
+    int deactivateOtherVersions(@Param("type") TermsType type, @Param("excludeId") Long excludeId);
+
+    // ===== 존재 여부 확인 =====
+
+    /**
+     * 특정 타입의 활성 약관 존재 여부 확인
+     */
+    @Query("SELECT COUNT(t) > 0 FROM Terms t WHERE t.type = :type AND t.isActive = true")
+    boolean hasActiveTerms(@Param("type") TermsType type);
+
+    /**
+     * 특정 타입과 버전의 약관 존재 여부 확인 (중복 생성 방지)
      */
     boolean existsByTypeAndVersion(TermsType type, String version);
 }
