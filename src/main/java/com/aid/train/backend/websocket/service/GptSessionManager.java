@@ -1,9 +1,7 @@
 package com.aid.train.backend.websocket.service;
 
 import com.aid.train.backend.websocket.dto.client.SessionInitMessage;
-import com.aid.train.backend.websocket.dto.common.AudioFormat;
-import com.aid.train.backend.websocket.dto.server.RealtimeSession;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.aid.train.backend.websocket.dto.server.GptSession;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -11,19 +9,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * GPT Realtime API WebSocket 연결을 관리하는 매니저
@@ -61,12 +59,13 @@ public class GptSessionManager {
     private String openAiApiKey;
 
     private final ObjectMapper objectMapper;
+    private final WebRtcStateManager webRtcStateManager;
 
     /**
      * sessionId → GPT WebSocket 연결 매핑
      * 각 사용자별로 독립적인 GPT 연결 유지
      */
-    private final Map<String, WebSocketSession> gptSessions = new ConcurrentHashMap<>();
+    private final Map<String, GptSession> gptSessionMap = new ConcurrentHashMap<>();
 
     /**
      * sessionId → GPT 응답 핸들러 매핑
@@ -147,7 +146,12 @@ public class GptSessionManager {
                         @Override
                         public void afterConnectionEstablished(WebSocketSession session) {
                             log.info("GPT WebSocket 연결 성공 - sessionId: {}", sessionId);
-                            gptSessions.put(sessionId, session);
+                            GptSession gptSession = GptSession.builder()
+                                    .sessionId(sessionId)
+                                    .webSocketSession(session)
+                                    .isReady(new AtomicBoolean(true))
+                                    .build();
+                            gptSessionMap.put(sessionId, gptSession);
 
                         }
 
@@ -256,15 +260,16 @@ public class GptSessionManager {
      * @param message 전송할 JSON 메시지
      */
     private void sendToGpt(String sessionId, String message) {
-        WebSocketSession gptSession = gptSessions.get(sessionId);
+        GptSession session = gptSessionMap.get(sessionId);
+        WebSocketSession gptWsSession = session.getWebSocketSession();
 
-        if (gptSession == null || !gptSession.isOpen()) {
+        if (gptWsSession == null || !gptWsSession.isOpen()) {
             log.error("GPT 세션이 없거나 닫혀있음 - sessionId: {}", sessionId);
             return;
         }
 
         try {
-            gptSession.sendMessage(new TextMessage(message));
+            gptWsSession.sendMessage(new TextMessage(message));
         } catch (Exception e) {
             log.error("GPT 메시지 전송 실패 - sessionId: {}", sessionId, e);
         }
@@ -276,8 +281,8 @@ public class GptSessionManager {
      * @param sessionId 대화 세션 ID
      * @return GPT WebSocket 연결
      */
-    public WebSocketSession getGptSession(String sessionId) {
-        return gptSessions.get(sessionId);
+    public GptSession getGptSession(String sessionId) {
+        return gptSessionMap.get(sessionId);
     }
 
     /**
@@ -287,8 +292,17 @@ public class GptSessionManager {
      * @return 존재 여부
      */
     public boolean hasGptSession(String sessionId) {
-        WebSocketSession session = gptSessions.get(sessionId);
+        WebSocketSession session = gptSessionMap.get(sessionId).getWebSocketSession();
         return session != null && session.isOpen();
+    }
+
+    /**
+     * Gpt 세션을 등록합니다.
+     *
+     * @param sessionId 대화 세션 Id
+     */
+    public void registerGptSession(String sessionId, GptSession gptSession) {
+        gptSessionMap.put(sessionId, gptSession);
     }
 
     /**
@@ -303,7 +317,7 @@ public class GptSessionManager {
     public void closeGptSession(String sessionId) {
         try {
             // 1. GPT WebSocket 연결 종료
-            WebSocketSession gptSession = gptSessions.remove(sessionId);
+            WebSocketSession gptSession = gptSessionMap.remove(sessionId).getWebSocketSession();
             if (gptSession != null && gptSession.isOpen()) {
                 gptSession.close();
                 log.info("GPT 세션 종료 완료 - sessionId: {}", sessionId);
@@ -323,7 +337,7 @@ public class GptSessionManager {
      * @return GPT 세션 수
      */
     public int getActiveGptSessionCount() {
-        return gptSessions.size();
+        return gptSessionMap.size();
     }
 
     /**
@@ -333,8 +347,9 @@ public class GptSessionManager {
      * - 서버 종료 시
      */
     public void closeAll() {
-        int count = gptSessions.size();
-        gptSessions.forEach((sessionId, session) -> {
+        int count = gptSessionMap.size();
+        gptSessionMap.forEach((sessionId, gptSession) -> {
+            WebSocketSession session = gptSession.getWebSocketSession();
             try {
                 if (session.isOpen()) {
                     session.close();
@@ -343,7 +358,7 @@ public class GptSessionManager {
                 log.error("GPT 세션 종료 실패 - sessionId: {}", sessionId, e);
             }
         });
-        gptSessions.clear();
+        gptSessionMap.clear();
         responseHandlers.clear();
         log.info("모든 GPT 세션 종료 완료 - 종료된 세션 수: {}", count);
     }
@@ -357,5 +372,43 @@ public class GptSessionManager {
     @FunctionalInterface
     public interface GptResponseHandler {
         void handleGptResponse(String sessionId, String jsonResponse);
+    }
+
+
+    public String connectToGptRealtime(String sessionId, String clientOfferSdp) {
+        try {
+            webRtcStateManager.updateState(sessionId, WebRtcStateManager.State.CONNECTING);
+            log.info("connectToGptRealtime() 호출됨 - sessionId: {}", sessionId);
+            String gptUrl = "https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01";
+            HttpClient httpClient = HttpClient.newHttpClient();
+
+            // offer sdp -> gpt 전송
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(gptUrl))
+                    .header("Authorization", "Bearer " + openAiApiKey)
+                    .header("Content-type", "application/sdp")
+                    .POST(HttpRequest.BodyPublishers.ofString(clientOfferSdp))
+                    .build();
+
+            log.info("gpt에게 sdp 전송: {}", clientOfferSdp);
+
+            // gpt sdp -> 수신
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if(response.statusCode() / 100 != 2) {
+                log.error("gpt sdp 수신 에러 발생: {} - {}", response.statusCode(), response.body());
+                throw new RuntimeException("gpt webRtc 연결 실패");
+            }
+
+            String gptAnswerSdp = response.body();
+            log.info("gpt Answer sdp 수신 성공: {}", gptAnswerSdp);
+
+            webRtcStateManager.updateState(sessionId, WebRtcStateManager.State.CONNECTED);
+            return gptAnswerSdp;
+
+        } catch (Exception e) {
+            log.error("gpt 연결 실패: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 }

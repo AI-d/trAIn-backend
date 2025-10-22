@@ -52,7 +52,6 @@ public class SessionCoordinator {
 
     private final ObjectMapper objectMapper;
 
-    private final Map<String, GptSession> gptSessionMap = new ConcurrentHashMap<>();
 
     /**
      * 세션 전체를 초기화합니다.
@@ -120,25 +119,27 @@ public class SessionCoordinator {
             RealtimeSession session = RealtimeSession.builder()
                     .model("gpt-4o-realtime-preview-2025-10-15")
                     .instructions(instructions)
-                    .voice(scenario.getVoice().name())
-                    .locale(scenario.getLocale())
+                    .voice(scenario.getVoice().name().toLowerCase())
                     .build();
 
             SessionInitMessage message = SessionInitMessage.makePrompt(session);
 
+           // gptSession 객체 생성
             GptSession gptSession = GptSession.builder()
                     .sessionId(sessionId)
+                    .webSocketSession(wsSession)
                     .build();
 
-            gptSessionMap.put(sessionId, gptSession);
+            gptSessionManager.registerGptSession(sessionId, gptSession);
 
             // 4. GPT Realtime API 연결
             gptSessionManager.createGptSession(
                     sessionId,
                     message,
                     this::handleGptResponse
+
             ).thenAccept((v) -> {
-                GptSession gSession = gptSessionMap.get(sessionId);
+                GptSession gSession = gptSessionManager.getGptSession(sessionId);
                 if (gSession != null) {
                     gSession .setReady(true);
                     Queue<byte[]> queue = gSession.getAudioQueue();
@@ -192,12 +193,13 @@ public class SessionCoordinator {
             }
 
             // 2. GPT 세션 확인
-            if (!gptSessionManager.hasGptSession(sessionId)) {
+            GptSession gptSession = gptSessionManager.getGptSession(sessionId);
+            if (gptSession == null) {
                 log.error("GPT 세션 없음 - sessionId: {}", sessionId);
                 return;
             }
 
-            // 3. GPT에 음성 전송
+            // 3. ready 상태 확인
             gptSessionManager.sendAudioToGpt(sessionId, audioData);
 
             // 4. 통계 기록
@@ -364,12 +366,8 @@ public class SessionCoordinator {
         log.info("모든 세션 종료 완료");
     }
 
-    public boolean hasGptSession(String sessionId) {
-        return gptSessionMap.containsKey(sessionId);
-    }
-
     public void queueAudio(String sessionId, byte[] audioData) {
-        GptSession gptSession = gptSessionMap.get(sessionId);
+        GptSession gptSession = gptSessionManager.getGptSession(sessionId);
         if (gptSession == null) {
             log.warn("GPT 세션 없음, 오디오 큐에 저장 불가 - sessionId: {}", sessionId);
             return;
