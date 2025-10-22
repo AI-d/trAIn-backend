@@ -376,4 +376,49 @@ public class SessionCoordinator {
         gptSession.getAudioQueue().offer(audioData);
         log.debug("오디오 큐에 저장 - sessionId: {}, 큐 크기: {}", sessionId, gptSession.getAudioQueue().size());
     }
+
+    // 사용자로부터 받은 발화 종료을 감지하여 오디오 큐에 저장되어 있던 오디오를 gpt에게 전달합니다.
+    public void handleUserAudioComplete(String sessionId) {
+        try {
+            log.info("사용자 음성 입력 완료 - sessionId: {}", sessionId);
+
+            GptSession gptSession = gptSessionManager.getGptSession(sessionId);
+            if(gptSession == null) {
+                log.error("gpt 세션 없음 - sessionId: {}", sessionId);
+                return;
+            }
+
+            Queue<byte[]> audioQueue = gptSession.getAudioQueue();
+            if(audioQueue.isEmpty()) {
+                log.warn("오디오 큐가 비어있음 - sessionId: {}", sessionId);
+                return;
+            }
+
+            int totalSize = audioQueue.stream()
+                    .mapToInt(audio -> audio.length)
+                    .sum();
+
+            log.info("오디오 조립 시작 - sessionId: {}, 오디오 조각 수: {}", sessionId, audioQueue.size());
+
+            // 하나의 바이트 배열로 합치기
+            byte[] completeAudio = new byte[totalSize];
+            int offset = 0;
+
+            while(!audioQueue.isEmpty()) {
+                byte[] chunk = audioQueue.poll();
+                if(chunk == null) {
+                    log.warn("오디오가 비어있음 - chunk: {}", chunk);
+                }
+                System.arraycopy(chunk, 0, completeAudio, offset, chunk.length);
+                offset += chunk.length;
+            }
+            log.info("오디오 조립 완료 - sessionId: {}, 최종 크기: {} bytes", sessionId, completeAudio.length);
+
+            // gpt로 전송
+            routeAudioToGpt(sessionId, completeAudio);
+
+        } catch (Exception e) {
+            log.error("사용자 음성 완료 처리 실패 - sessionId: {}", sessionId, e);
+        }
+    }
 }
