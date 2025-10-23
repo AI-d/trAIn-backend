@@ -42,7 +42,7 @@ public class EmailService {
             helper.setText(buildVerificationEmailHtml(name, otpCode), true); // HTML 사용
 
             javaMailSender.send(mimeMessage);
-            log.info("인증 이메일 발송 성공: {}", toEmail);
+            log.info("인증 이메일 발송 성공: {}", LogMaskingUtil.maskEmail(toEmail));
 
         } catch (MessagingException e) {
             log.error("인증 이메일 발송 실패: {}, error={}",
@@ -67,7 +67,7 @@ public class EmailService {
                         <p style="font-size: 14px; color: #777;">이 코드는 <strong>15분</strong>간 유효합니다.</p>
                         <p style="font-size: 12px; color: #aaa; margin-top: 30px;">본인이 요청하지 않으셨다면 이 이메일을 무시해주세요.</p>
                         <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
-                        <p style="font-size: 12px; color: #aaa;">© 2024 Dialogym. All rights reserved.</p>
+                        <p style="font-size: 12px; color: #aaa;">© 2025 Dialogym. All rights reserved.</p>
                     </div>
                 </body>
                 </html>
