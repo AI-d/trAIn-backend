@@ -155,7 +155,7 @@ public class SessionCoordinator {
                     gSession.setReady(true);
 
                     // 대기 중이던 오디오 큐 전송
-                    Queue<byte[]> queue = gSession.getAudioQueue();
+                    /*Queue<byte[]> queue = gSession.getAudioQueue();
                     if(queue.size() > 0) {
                         log.info("대기 중이던 오디오 청크 전송 시작 - count: {}", queue.size());
                         while (!queue.isEmpty()) {
@@ -163,7 +163,7 @@ public class SessionCoordinator {
                             gptSessionManager.sendAudioToGpt(sessionId, chunk);
                         }
                         log.info("대기 중이던 오디오 청크 전송 완료");
-                    }
+                    }*/
                 }
             })
             .exceptionally(ex -> {
@@ -518,8 +518,8 @@ public class SessionCoordinator {
             return;
         }
 
-        gptSession.getAudioQueue().offer(audioData);
-        log.debug("오디오 큐에 저장 - sessionId: {}, 큐 크기: {}", sessionId, gptSession.getAudioQueue().size());
+        /*gptSession.getAudioQueue().offer(audioData);
+        log.debug("오디오 큐에 저장 - sessionId: {}, 큐 크기: {}", sessionId, gptSession.getAudioQueue().size());*/
     }
 
     public void requestInitialGptResponse(String sessionId) {

@@ -68,7 +68,8 @@ public class AudioHandler extends AbstractWebSocketHandler {
 
         } else if("speech.end".equals(data.get("type").getAsString())) {
             log.info("speech.end 수신 - sessionId: {}", sessionId);
-            // Manual 모드에서는 명시적으로 commit과 response.create를 보내야 함
+
+            // Manual 모드에서는 명시적으로 commit 과 response.create 를 보내야 함
             sessionCoordinator.commitAndRequestResponse(sessionId);
         }
 
@@ -126,7 +127,11 @@ public class AudioHandler extends AbstractWebSocketHandler {
         String sessionId = extractSessionId(session);
         byte[] audioData = message.getPayload().array();
 
-        try {
+        log.info("gpt에 오디오 전송");
+        sessionCoordinator.routeAudioToGpt(sessionId, audioData);
+
+
+        /*try {
 
             // WebRTC 확인
             if (!webRtcStateManager.isConnected(sessionId)) {
@@ -151,7 +156,7 @@ public class AudioHandler extends AbstractWebSocketHandler {
 
         } catch (Exception e) {
             log.error("오디오 처리 실패 - sessionId: {}", sessionId, e);
-        }
+        }*/
     }
 
     /**

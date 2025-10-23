@@ -300,7 +300,9 @@ public class GptSessionManager {
      * @return 존재 여부
      */
     public boolean hasGptSession(String sessionId) {
-        WebSocketSession session = gptSessionMap.get(sessionId).getWebSocketSession();
+        GptSession gptSession = gptSessionMap.get(sessionId);
+        if (gptSession == null) return false;
+        WebSocketSession session = gptSession.getWebSocketSession();
         return session != null && session.isOpen();
     }
 
