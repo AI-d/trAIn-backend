@@ -1,5 +1,6 @@
 package com.aid.train.backend.websocket.handler;
 
+import com.aid.train.backend.websocket.dto.server.GptSession;
 import com.aid.train.backend.websocket.service.GptSessionManager;
 import com.aid.train.backend.websocket.service.SessionCoordinator;
 import com.aid.train.backend.websocket.service.WebRtcStateManager;
@@ -49,19 +50,27 @@ public class AudioHandler extends AbstractWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         JsonObject data = JsonParser.parseString(message.getPayload()).getAsJsonObject();
+        String sessionId = extractSessionId(session);
+
         if ("SESSION_INIT".equals(data.get("type").getAsString())) {
             Long scenarioId = data.get("scenarioId").getAsLong();
-            String sessionId = extractSessionId(session);
+            // session_init 메세지로 부터 유저 식별정보 받아오기
+            // 식별자로 유저 ID 조회
 
             // 시나리오 ID를 세션 속성에 저장
             session.getAttributes().put("scenarioId", scenarioId);
+            // 유저 ID를 세션 속성에 저장
 
 
             // 세션 초기화 (GPT 연결, DialogueSession 생성 등)
             sessionCoordinator.initializeSession(sessionId, session, scenarioId);
             log.info("GPT 세션 생성 완료 - sessionId: {}", sessionId);
 
+        } else if("speech.end".equals(data.get("type").getAsString())) {
+            log.info("speech.end 수신 - sessionId: {}", sessionId);
 
+            // Manual 모드에서는 명시적으로 commit 과 response.create 를 보내야 함
+            sessionCoordinator.commitAndRequestResponse(sessionId);
         }
 
 
@@ -116,43 +125,38 @@ public class AudioHandler extends AbstractWebSocketHandler {
     @Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
         String sessionId = extractSessionId(session);
+        byte[] audioData = message.getPayload().array();
 
-        try {
-            // 1. 바이너리 데이터 추출
-            byte[] audioData = message.getPayload().array();
+        log.info("gpt에 오디오 전송");
+        sessionCoordinator.routeAudioToGpt(sessionId, audioData);
+
+
+        /*try {
+
+            // WebRTC 확인
+            if (!webRtcStateManager.isConnected(sessionId)) {
+                log.warn("WebRTC 연결 안됨 - sessionId: {}", sessionId);
+                return;
+            }
+
+            GptSession gptSession = gptSessionManager.getGptSession(sessionId);
+            if(gptSession == null) {
+                log.warn("gpt 세션 미준비, 큐에 저장 - sessionId: {}, ready: {}", sessionId, gptSession != null ? gptSession.getIsReady() : "false");
+                sessionCoordinator.queueAudio(sessionId, audioData);
+                return;
+            }
 
             if(audioData == null || audioData.length == 0) {
                 log.warn("AudioHandler - 빈 오디오 데이터 - sessionId: {}", sessionId);
                 return;
             }
 
-            log.debug("AudioHandler - 음성 수신 - sessionId: {}, 크기: {} bytes",
-                    sessionId, audioData.length);
-
-            // 2. WebRTC 연결 상태 확인 및 업데이트
-            if (!webRtcStateManager.isConnected(sessionId)) {
-                // webRtc 연결 확인 후 음성 전달 시작
-                log.debug("AudioHandler - WebRTC 연결 대기 중 - sessionId: {}", sessionId);
-                return;
-
-                /*// 첫 음성 데이터 수신 시 WebRTC CONNECTED로 변경
-                webRtcStateManager.updateState(sessionId, WebRtcStateManager.State.CONNECTED);
-                log.info("AudioHandler - WebRTC 연결됨 - sessionId: {}", sessionId);*/
-            }
-
-            // 3. gpt 세션 확인 후 큐에 저장
-            if (!gptSessionManager.hasGptSession(sessionId)) {
-                log.warn("AudioHandler - GPT 세션 준비 중, 큐에 저장 - sessionId: {}", sessionId);
-                sessionCoordinator.queueAudio(sessionId, audioData);
-                return;
-            }
-
-            // 4. gpt 로 음성 라우팅
+            // gpt에 음성 전송
             sessionCoordinator.routeAudioToGpt(sessionId, audioData);
 
         } catch (Exception e) {
-            log.error("AudioHandler - 음성 처리 실패 - sessionId: {}", sessionId, e);
-        }
+            log.error("오디오 처리 실패 - sessionId: {}", sessionId, e);
+        }*/
     }
 
     /**
