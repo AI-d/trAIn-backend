@@ -1,9 +1,10 @@
 package com.aid.train.backend.websocket.service;
 
 import com.aid.train.backend.websocket.dto.server.GptSession;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -13,8 +14,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
-@Component
+@Service
+@RequiredArgsConstructor
 public class WebRtcPeerConnectionManager {
+
 
     @Value("${spring.ai.openai.api-key}")
     private String openAiApiKey;
