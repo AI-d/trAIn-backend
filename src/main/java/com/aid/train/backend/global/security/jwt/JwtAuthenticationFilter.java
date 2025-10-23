@@ -1,6 +1,8 @@
 package com.aid.train.backend.global.security.jwt;
 
+import com.aid.train.backend.global.exception.TrainException;
 import com.aid.train.backend.global.security.service.CustomUserDetailsService;
+import com.aid.train.backend.global.util.LogMaskingUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -51,19 +53,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String token = resolveToken(request);
 
         // 토큰이 유효하고, 현재 SecurityContext에 인증 정보가 없는 경우
-        if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-            Long userId = jwtTokenProvider.getUserIdFromToken(token);
-            UserDetails userDetails = customUserDetailsService.loadUserById(userId);
+        if (StringUtils.hasText(token)
+                && SecurityContextHolder.getContext().getAuthentication() == null) {
+            try {
+                if (jwtTokenProvider.validateToken(token)) {
+                    Long userId = jwtTokenProvider.getUserIdFromToken(token);
+                    UserDetails userDetails = customUserDetailsService.loadUserById(userId);
 
-            // 인증 정보 생성 및 SecurityContext에 설정
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            log.debug("Security Context에 '{}' 인증 정보를 저장했습니다, uri: {}", userDetails.getUsername(), request.getRequestURI());
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                    log.debug("Security Context에 '{}' 인증 정보를 저장했습니다, uri: {}",
+                            LogMaskingUtil.maskSensitiveData(userDetails.getUsername()),
+                            request.getRequestURI());
+                }
+            } catch (TrainException ex) {
+                // 유효하지 않은/만료 토큰 등: 인증 없이 통과시키되, 민감 메시지는 마스킹하여 로깅
+                log.trace("JWT 검증 실패: {}", LogMaskingUtil.maskSensitiveData(ex.getMessage()));
+            } catch (Exception ex) {
+                // 예기치 못한 예외가 500으로 전파되는 것 방지
+                log.warn("JWT 처리 중 예외 발생: {}", LogMaskingUtil.maskSensitiveData(ex.getMessage()));
+            }
         }
 
         filterChain.doFilter(request, response);
