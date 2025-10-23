@@ -50,11 +50,16 @@ public class SessionCoordinator {
     private final WebRtcStateManager webRtcStateManager;
 
     private final ScenarioRepository scenarioRepository;
+    private final com.aid.train.backend.domain.session.service.TranscriptService transcriptService;
 
     private final ObjectMapper objectMapper;
 
     // GPT 응답 진행 중 상태 추적 (response.done 받기 전까지 true)
     private final Map<String, AtomicBoolean> gptResponseInProgress = new ConcurrentHashMap<>();
+    
+    // 세션별 텍스트 누적 버퍼 (delta로 받은 텍스트를 모음)
+    private final Map<String, StringBuilder> userTranscriptBuffer = new ConcurrentHashMap<>();
+    private final Map<String, StringBuilder> aiTranscriptBuffer = new ConcurrentHashMap<>();
 
 
     /**
@@ -80,6 +85,10 @@ public class SessionCoordinator {
 
             // 응답 진행 상태 초기화
             gptResponseInProgress.put(sessionId, new AtomicBoolean(false));
+            
+            // 텍스트 버퍼 초기화
+            userTranscriptBuffer.put(sessionId, new StringBuilder());
+            aiTranscriptBuffer.put(sessionId, new StringBuilder());
 
             // 1. WebSocket 세션 등록
             wsSessionManager.registerSession(sessionId, wsSession);
@@ -123,11 +132,17 @@ public class SessionCoordinator {
 
             // Turn Detection을 Manual 모드로 설정 (Server VAD 비활성화)
             // turnDetection을 null로 보내면 Manual 모드 (클라이언트가 직접 제어)
+            // input_audio_transcription을 설정하여 STT 활성화
             RealtimeSession session = RealtimeSession.builder()
                     .model("gpt-4o-realtime-preview-2024-10-01")
                     .instructions(instructions)
                     .voice(scenario.getVoice().name().toLowerCase())
                     .turnDetection(null)  // null = Manual 모드
+                    .inputAudioTranscription(
+                            RealtimeSession.InputAudioTranscription.builder()
+                                    .model("whisper-1")
+                                    .build()
+                    )
                     .build();
 
             SessionInitMessage message = SessionInitMessage.makePrompt(session);
@@ -301,10 +316,43 @@ public class SessionCoordinator {
                         sendAudioDeltaInChunks(sessionId, base64Audio);
                     }
                     break;
-                case "response.audio_transcript.delta" :
+                case "conversation.item.input_audio_transcription.completed":
+                    // 사용자 음성 → 텍스트 변환 완료
+                    if (json.has("transcript")) {
+                        String userText = json.get("transcript").getAsString();
+                        log.info("사용자 발화 완료 - sessionId: {}, text: {}", sessionId, userText);
+                        
+                        // DB에 저장
+                        transcriptService.saveUserTranscript(sessionId, userText);
+                    }
+                    break;
+
+                case "response.audio_transcript.delta":
+                    // AI 음성 → 텍스트 변환 중 (delta로 조각조각 옴)
                     if (json.has("delta")) {
-                        String transcript = json.get("delta").getAsString();
-                        log.info("음성 텍스트: {}", transcript);
+                        String delta = json.get("delta").getAsString();
+                        StringBuilder buffer = aiTranscriptBuffer.get(sessionId);
+                        if (buffer != null) {
+                            buffer.append(delta);
+                            log.debug("AI 텍스트 delta 누적 - sessionId: {}, delta: {}", sessionId, delta);
+                        }
+                    }
+                    break;
+
+                case "response.audio_transcript.done":
+                    // AI 음성 → 텍스트 변환 완료
+                    if (json.has("transcript")) {
+                        String aiText = json.get("transcript").getAsString();
+                        log.info("AI 발화 완료 - sessionId: {}, text: {}", sessionId, aiText);
+                        
+                        // DB에 저장
+                        transcriptService.saveAiTranscript(sessionId, aiText);
+                        
+                        // 버퍼 초기화
+                        StringBuilder buffer = aiTranscriptBuffer.get(sessionId);
+                        if (buffer != null) {
+                            buffer.setLength(0);
+                        }
                     }
                     break;
 
@@ -465,6 +513,11 @@ public class SessionCoordinator {
 
             // 4. WebSocket 세션 제거
             wsSessionManager.removeSession(sessionId);
+            
+            // 5. 텍스트 버퍼 정리
+            userTranscriptBuffer.remove(sessionId);
+            aiTranscriptBuffer.remove(sessionId);
+            gptResponseInProgress.remove(sessionId);
 
             log.info("세션 종료 완료 - sessionId: {}", sessionId);
 
