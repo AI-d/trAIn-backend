@@ -3,6 +3,7 @@ package com.aid.train.backend.global.security.jwt;
 import com.aid.train.backend.global.exception.TrainException;
 import com.aid.train.backend.global.exception.enums.ErrorCode;
 import com.aid.train.backend.global.properties.JwtProperties;
+import com.aid.train.backend.global.util.LogMaskingUtil;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -121,9 +122,9 @@ public class JwtTokenProvider {
                 .claim(CLAIM_EMAIL, email)
                 .claim(CLAIM_NAME, name)
                 .claim(CLAIM_TOKEN_TYPE, TYPE_SOCIAL_SIGNUP_PENDING)
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .signWith(secretKey, SignatureAlgorithm.HS512)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(secretKey)
                 .compact();
     }
 
@@ -141,16 +142,16 @@ public class JwtTokenProvider {
             Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token);
             return true;
         } catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
-            log.warn("잘못된 JWT 서명입니다. Token: {}", token, e);
+            log.warn("잘못된 JWT 서명입니다. tokenPrefix={}...", LogMaskingUtil.maskToken(token), e);
             throw new TrainException(ErrorCode.TOKEN_INVALID_SIGNATURE);
         } catch (ExpiredJwtException e) {
-            log.warn("만료된 JWT 토큰입니다. Token: {}", token, e);
+            log.warn("만료된 JWT 토큰입니다. tokenPrefix={}...", LogMaskingUtil.maskToken(token), e);
             throw new TrainException(ErrorCode.TOKEN_EXPIRED);
         } catch (UnsupportedJwtException e) {
-            log.warn("지원되지 않는 JWT 토큰입니다. Token: {}", token, e);
+            log.warn("지원되지 않는 JWT 토큰입니다. tokenPrefix={}...", LogMaskingUtil.maskToken(token), e);
             throw new TrainException(ErrorCode.TOKEN_UNSUPPORTED);
         } catch (IllegalArgumentException e) {
-            log.warn("JWT 토큰이 잘못되었습니다. Token: {}", token, e);
+            log.warn("JWT 토큰이 잘못되었습니다. tokenPrefix={}...", LogMaskingUtil.maskToken(token), e);
             throw new TrainException(ErrorCode.TOKEN_INVALID);
         }
     }
@@ -223,25 +224,21 @@ public class JwtTokenProvider {
                 .claim(CLAIM_USER_ID, userId)
                 .claim(CLAIM_EMAIL, email)
                 .claim(CLAIM_TOKEN_TYPE, tokenType)
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .signWith(secretKey, SignatureAlgorithm.HS512)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(secretKey)
                 .compact();
     }
 
     // ===== 내부 DTO 클래스 =====
 
     /**
-     * Access Token과 Refresh Token을 담는 내부 DTO 클래스입니다.
+     * Access Token과 Refresh Token을 담는 불변 데이터 객체(DTO)입니다.
+     * Java Record를 사용하여 생성자, Getter, equals, hashCode, toString을 자동 생성합니다.
+     *
+     * @param accessToken  발급된 Access Token
+     * @param refreshToken 발급된 Refresh Token
      */
-    @Getter
-    public static class JwtResponse {
-        private final String accessToken;
-        private final String refreshToken;
-
-        public JwtResponse(String accessToken, String refreshToken) {
-            this.accessToken = accessToken;
-            this.refreshToken = refreshToken;
-        }
+    public record JwtResponse(String accessToken, String refreshToken) {
     }
 }

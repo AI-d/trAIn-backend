@@ -1,5 +1,6 @@
 package com.aid.train.backend.domain.verification.dto.request;
 
+import com.aid.train.backend.global.util.LogMaskingUtil;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -36,4 +37,16 @@ public class EmailResendRequestDto {
     @NotBlank(message = "이메일은 필수입니다")
     @Email(message = "올바른 이메일 형식이 아닙니다")
     private String email;
+
+    /**
+     * 로그 출력 시 민감정보(이메일)를 마스킹합니다.
+     * 디버깅 중 toString() 호출로 인해 정보가 유출되지 않도록 보호합니다.
+     */
+    @Override
+    public String toString() {
+        return "EmailResendRequestDto(" +
+                "email=" + LogMaskingUtil.maskEmail(email) +
+                ")";
+    }
+
 }

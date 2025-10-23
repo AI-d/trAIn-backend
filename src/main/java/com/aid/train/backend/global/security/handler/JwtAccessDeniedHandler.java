@@ -2,6 +2,7 @@ package com.aid.train.backend.global.security.handler;
 
 import com.aid.train.backend.global.exception.enums.ErrorCode;
 import com.aid.train.backend.global.util.ErrorResponseWriter;
+import com.aid.train.backend.global.util.LogMaskingUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -36,9 +37,11 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
         // 요청 경로에 따라 더 구체적인 에러 메시지를 설정할 수 있습니다. (선택적)
 
         log.warn("권한 부족 접근 거부: URI: {}, Principal: {}, Message: {}",
-                requestUri,
-                request.getUserPrincipal() != null ? request.getUserPrincipal().getName() : "Anonymous",
-                accessDeniedException.getMessage());
+                LogMaskingUtil.maskSensitiveData(requestUri),
+                request.getUserPrincipal() != null
+                        ? LogMaskingUtil.maskSensitiveData(request.getUserPrincipal().getName())
+                        : "Anonymous",
+                LogMaskingUtil.maskSensitiveData(accessDeniedException.getMessage()));
 
         ErrorResponseWriter.write(
                 request,
