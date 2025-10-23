@@ -385,7 +385,7 @@ public class GptSessionManager {
     }
 
 
-    public String connectToGptRealtime(String sessionId, String clientOfferSdp) {
+    /*public String connectToGptRealtime(String sessionId, String clientOfferSdp) {
         try {
             webRtcStateManager.updateState(sessionId, WebRtcStateManager.State.CONNECTING);
             log.info("connectToGptRealtime() 호출됨 - sessionId: {}", sessionId);
@@ -420,5 +420,5 @@ public class GptSessionManager {
             log.error("gpt 연결 실패: {}", e.getMessage());
             throw new RuntimeException(e);
         }
-    }
+    }*/
 }
