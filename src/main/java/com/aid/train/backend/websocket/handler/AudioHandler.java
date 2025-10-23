@@ -1,5 +1,6 @@
 package com.aid.train.backend.websocket.handler;
 
+import com.aid.train.backend.domain.session.service.TranscriptService;
 import com.aid.train.backend.websocket.dto.server.GptSession;
 import com.aid.train.backend.websocket.service.GptSessionManager;
 import com.aid.train.backend.websocket.service.SessionCoordinator;
@@ -46,7 +47,6 @@ public class AudioHandler extends AbstractWebSocketHandler {
     private final SessionCoordinator sessionCoordinator;
     private final WebRtcStateManager webRtcStateManager;
     private final GptSessionManager gptSessionManager;
-
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         JsonObject data = JsonParser.parseString(message.getPayload()).getAsJsonObject();

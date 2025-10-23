@@ -122,7 +122,9 @@ dependencies {
     testRuntimeOnly 'com.h2database:h2'
 
     // ===== WebRTC =====
-    implementation 'org.webrtc:google-webrtc:1.0.32006'
+    // WebRTC Java bindings
+    //implementation 'org.webrtc:google-webrtc:1.0.32006'
+    //implementation 'dev.onvoid.webrtc:webrtc-java:0.7.0'
 }
 
 tasks.named('test') {

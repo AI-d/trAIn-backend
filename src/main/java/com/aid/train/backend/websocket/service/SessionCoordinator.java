@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.BinaryMessage;
+import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Base64;
@@ -324,6 +325,20 @@ public class SessionCoordinator {
 
                         // DB에 저장
                         transcriptService.saveUserTranscript(sessionId, userText);
+                        log.info("사용자 발화 DB 저장");
+
+                        // 프론트로 실시간 전송
+                        WebSocketSession wsSession = wsSessionManager.getSession(sessionId);
+                        log.info("프론트로 전송");
+                        if(wsSession != null && wsSession.isOpen()) {
+                            log.info("프론트로 전송");
+                            Map<String, String> payload = Map.of(
+                                    "type", "user.transcript",
+                                    "text", userText
+                            );
+                            String jsonPayload = objectMapper.writeValueAsString(payload);
+                            wsSession.sendMessage(new TextMessage(jsonPayload));
+                        }
                     }
                     break;
 
@@ -589,7 +604,7 @@ public class SessionCoordinator {
                         "type": "response.create",
                          "response": {
                             "modalities": ["audio", "text"],
-                            "instructions": "사용자에게 한국어로 인사하고 대화를 시작해주세요."
+                            "instructions": "사용자에게 한국어로 인사하고 제시한 프롬프트에 맞게 대화를 시작해주세요."
                          }
                     }
                     """;
