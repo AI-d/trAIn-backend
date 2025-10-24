@@ -78,8 +78,7 @@ public class RealtimeSessionController {
         Map<String, Object> request = Map.of (
                 "model", req.model(),
                 "voice", req.voice(),
-                "instruction", instructions,
-                "turn_detection", Map.of(), // 매뉴얼 모드 사용
+                "instructions", instructions,
                 "input_audio_transcription", Map.of("model", req.sttModel())
         );
 
