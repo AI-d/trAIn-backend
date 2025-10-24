@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.aid.train.backend.global.exception.enums.ErrorCode.SESSION_ALREADY_COMPLETED;
@@ -75,12 +76,12 @@ public class RealtimeSessionController {
         headers.setBearerAuth(openAiApiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Map<String, Object> request = Map.of (
-                "model", req.model(),
-                "voice", req.voice(),
-                "instructions", instructions,
-                "input_audio_transcription", Map.of("model", req.sttModel())
-        );
+        Map<String, Object> request = new HashMap<>();
+        request.put("model", req.model());
+        request.put("voice", req.voice());
+        request.put("instructions", instructions);
+        request.put("turn_detection", null);  // null 가능
+        request.put("input_audio_transcription", Map.of("model", req.sttModel()));
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
