@@ -1,14 +1,13 @@
 package com.aid.train.backend.domain.feedback.controller;
 
 import com.aid.train.backend.domain.feedback.dto.request.FeedbackChoiceRequest;
-import com.aid.train.backend.domain.feedback.dto.request.FeedbackCreateRequest;
 import com.aid.train.backend.domain.feedback.dto.response.FeedbackHistoryResponse;
 import com.aid.train.backend.domain.feedback.dto.response.FeedbackResponse;
 import com.aid.train.backend.domain.feedback.dto.response.FeedbackStatsResponse;
 import com.aid.train.backend.domain.feedback.service.FeedbackService;
 import com.aid.train.backend.global.exception.TrainException;
-import com.aid.train.backend.global.response.ApiResponse;
 import com.aid.train.backend.global.exception.enums.ErrorCode;
+import com.aid.train.backend.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,7 +28,7 @@ import java.util.List;
 
 /**
  * 피드백 관리 컨트롤러
- *
+ * <p>
  * 역할:
  * - 피드백 생성 (AI가 분석 완료 후 호출)
  * - 개선안 선택 (사용자가 A, B, C 또는 직접 수정)
@@ -50,7 +49,7 @@ public class FeedbackController {
 
     /**
      * AI를 통해 자동으로 피드백을 생성합니다.
-     *
+     * <p>
      * 대화 세션이 완료된 후 호출하는 API입니다.
      * AI가 전체 대화를 분석하여 자동으로 점수와 개선안을 생성합니다.
      *
@@ -84,8 +83,8 @@ public class FeedbackController {
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             )
     })
-    @PostMapping("/sessions/{sessionId}/generate")
-    public ResponseEntity<?> generateFeedbackWithAI(
+    @PostMapping("/sessions/{sessionId}")
+    public ResponseEntity<?> feedbackWithAI(
             @Parameter(description = "피드백을 생성할 세션 ID", required = true, example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable String sessionId
     ) {
@@ -114,77 +113,6 @@ public class FeedbackController {
 
             return ResponseEntity.internalServerError().body(
                     ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR, "AI 피드백 생성 중 오류가 발생했습니다.")
-            );
-        }
-    }
-
-    /**
-     * 새로운 피드백을 생성합니다.
-     *
-     * AI가 대화 분석을 완료한 후 피드백을 저장할 때 사용하는 API입니다.
-     * 점수화된 결과와 3가지 스타일의 개선안을 저장합니다.
-     *
-     * @param request 피드백 생성 요청
-     * @return 생성된 피드백 정보
-     */
-    @Operation(
-            summary = "피드백 생성",
-            description = "AI 분석 결과를 바탕으로 피드백을 생성합니다. " +
-                    "직접 AI 응답 데이터를 전달하여 피드백을 저장할 때 사용합니다."
-    )
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "피드백 생성 성공",
-                    content = @Content(schema = @Schema(implementation = FeedbackResponse.class))
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "400",
-                    description = "잘못된 요청 (유효성 검증 실패, 점수 불일치 등)",
-                    content = @Content(schema = @Schema(implementation = ApiResponse.class))
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "409",
-                    description = "이미 피드백이 존재함",
-                    content = @Content(schema = @Schema(implementation = ApiResponse.class))
-            )
-    })
-    @PostMapping
-    public ResponseEntity<?> createFeedback(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "피드백 생성에 필요한 모든 정보 (AI 분석 결과)",
-                    required = true,
-                    content = @Content(schema = @Schema(implementation = FeedbackCreateRequest.class))
-            )
-            @Valid @RequestBody FeedbackCreateRequest request
-    ) {
-        log.info("피드백 생성 요청 - sessionId: {}, totalScore: {}",
-                request.sessionId(), request.totalScore());
-
-        try {
-            FeedbackResponse response = feedbackService.createFeedback(request);
-
-            log.info("피드백 생성 완료 - feedbackId: {}, sessionId: {}",
-                    response.id(), request.sessionId());
-
-            return ResponseEntity.ok(
-                    ApiResponse.success("피드백이 생성되었습니다.", response)
-            );
-
-        } catch (TrainException e) {
-            log.error("피드백 생성 실패 (TrainException) - sessionId: {}, errorCode: {}",
-                    request.sessionId(), e.getErrorCode(), e);
-
-            return ResponseEntity.badRequest().body(
-                    ApiResponse.error(e.getErrorCode())
-            );
-
-        } catch (Exception e) {
-            log.error("피드백 생성 실패 (Exception) - sessionId: {}",
-                    request.sessionId(), e);
-
-            return ResponseEntity.internalServerError().body(
-                    ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR, "피드백 생성 중 오류가 발생했습니다.")
             );
         }
     }
@@ -245,11 +173,11 @@ public class FeedbackController {
 
     /**
      * 사용자가 개선안을 선택합니다.
-     *
+     * <p>
      * A, B, C 중 하나를 선택하거나 직접 수정할 수 있습니다.
      *
      * @param sessionId 세션 ID
-     * @param request 선택 요청
+     * @param request   선택 요청
      * @return 업데이트된 피드백 정보
      */
     @Operation(
@@ -275,7 +203,7 @@ public class FeedbackController {
             )
     })
     @PutMapping("/{sessionId}/choice")
-    public ResponseEntity<?> choosealternative(
+    public ResponseEntity<?> chooseAlternative(
             @Parameter(description = "선택할 피드백의 세션 ID", required = true, example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable String sessionId,
 
@@ -290,7 +218,7 @@ public class FeedbackController {
                 sessionId, request.chosenAlternative());
 
         try {
-            FeedbackResponse response = feedbackService.choosealternative(sessionId, request);
+            FeedbackResponse response = feedbackService.chooseAlternative(sessionId, request);
 
             log.info("개선안 선택 완료 - sessionId: {}, choice: {}",
                     sessionId, request.chosenAlternative());
@@ -319,7 +247,7 @@ public class FeedbackController {
     /**
      * 특정 사용자의 피드백 히스토리를 조회합니다 (페이징).
      *
-     * @param userId 사용자 ID
+     * @param userId   사용자 ID
      * @param pageable 페이징 정보
      * @return 피드백 히스토리 목록
      */
@@ -412,7 +340,7 @@ public class FeedbackController {
 
     /**
      * 특정 사용자의 피드백 통계를 조회합니다.
-     *
+     * <p>
      * 성장 그래프 및 대시보드에 사용됩니다.
      *
      * @param userId 사용자 ID

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 피드백 상세 응답 DTO
@@ -20,9 +21,9 @@ import java.time.LocalDateTime;
  * </p>
  *
  * @author 왕택준
- * @since 1.0.0
  * @see com.aid.train.backend.domain.feedback.controller.FeedbackController#getFeedback(String)
  * @see com.aid.train.backend.domain.feedback.controller.FeedbackController#createFeedback(com.aid.train.backend.domain.feedback.dto.request.FeedbackCreateRequest)
+ * @since 1.0.0
  */
 @Schema(description = "피드백 상세 정보")
 @Builder
@@ -91,7 +92,7 @@ public record FeedbackResponse(
          * 너무 빠르거나 느리지 않은 적절한 속도를 유지했는지 분석합니다.
          * </p>
          */
-        @Schema(description = "발화속도 점수 (0-30)", example = "23", minimum = "0", maximum = "30")
+        @Schema(description = "발화속도 점수 (0-30)", example = "23", minimum = "0", maximum = "25")
         Integer speechRateScore,
 
         /**
@@ -101,7 +102,7 @@ public record FeedbackResponse(
          * 점수가 높을수록 추임새가 적어 좋은 것입니다.
          * </p>
          */
-        @Schema(description = "추임새 점수 (0-20) - 높을수록 좋음", example = "12", minimum = "0", maximum = "20")
+        @Schema(description = "추임새 점수 (0-20) - 높을수록 좋음", example = "12", minimum = "0", maximum = "25")
         Integer fillerWordsScore,
 
         /**
@@ -217,7 +218,28 @@ public record FeedbackResponse(
          * </p>
          */
         @Schema(description = "피드백 수정 시간", example = "2025-10-24T14:35:00")
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+
+        /**
+         * 전체 대화 흐름 분석
+         * AI 생성 시에만 포함, 조회 시에는 null
+         */
+        @Schema(description = "전체 대화 흐름 분석 (생성 시에만 포함)")
+        OverallAnalysis overallAnalysis,
+
+        /**
+         * 문장별 세부 분석 목록
+         * 각 사용자 발화에 대한 상세 분석
+         */
+        @Schema(description = "문장별 세부 분석 목록 (생성 시에만 포함)")
+        List<SentenceAnalysis> sentenceAnalyses,
+
+        /**
+         * 대화 전체 개선안
+         * 현재 패턴 vs 이상적 패턴 + 완전한 개선 대화
+         */
+        @Schema(description = "대화 전체 개선안 (생성 시에만 포함)")
+        ConversationImprovement conversationImprovement
 ) {
     /**
      * Feedback 엔티티로부터 FeedbackResponse를 생성합니다.
@@ -247,6 +269,10 @@ public record FeedbackResponse(
                 .isChoiceComplete(feedback.isChoiceComplete())
                 .createdAt(feedback.getCreatedAt())
                 .updatedAt(feedback.getUpdatedAt())
+                // 새 필드들은 null (기존 호환성)
+                .overallAnalysis(null)
+                .sentenceAnalyses(null)
+                .conversationImprovement(null)
                 .build();
     }
 
@@ -274,4 +300,128 @@ public record FeedbackResponse(
                 .build();
     }
 
+    public static FeedbackResponse withComprehensiveAnalysis(
+            Feedback feedback,
+            OverallAnalysis overallAnalysis,
+            List<SentenceAnalysis> sentenceAnalyses,
+            ConversationImprovement conversationImprovement) {
+
+        return FeedbackResponse.builder()
+                .id(feedback.getId())
+                .sessionId(feedback.getDialogueSession().getSessionId())
+                .scenarioId(feedback.getDialogueSession().getScenario().getId())
+                .scenarioTitle(feedback.getDialogueSession().getScenario().getTitle())
+                .totalScore(feedback.getTotalScore())
+                .scoreGrade(feedback.getScoreGrade())
+                .speechRateScore(feedback.getSpeechRateScore())
+                .fillerWordsScore(feedback.getFillerWordsScore())
+                .politenessScore(feedback.getPolitenessScore())
+                .clarityScore(feedback.getClarityScore())
+                .improvementPoints(feedback.getImprovementPoints())
+                .originalTranscript(feedback.getOriginalTranscript())
+                .alternativeA(feedback.getAlternativeA())
+                .alternativeB(feedback.getAlternativeB())
+                .alternativeC(feedback.getAlternativeC())
+                .chosenAlternative(feedback.getChosenAlternative())
+                .finalChoice(feedback.getFinalChoice())
+                .isChoiceComplete(feedback.isChoiceComplete())
+                .createdAt(feedback.getCreatedAt())
+                .updatedAt(feedback.getUpdatedAt())
+                // 새로운 종합 분석 포함
+                .overallAnalysis(overallAnalysis)
+                .sentenceAnalyses(sentenceAnalyses)
+                .conversationImprovement(conversationImprovement)
+                .build();
+    }
+
+    /**
+     * 전체 대화 흐름 분석
+     */
+    @Schema(description = "전체 대화 흐름 분석")
+    @Builder
+    public record OverallAnalysis(
+            @Schema(description = "대화 흐름 평가", example = "요청을 전달하는 데 시간이 걸렸으나 결국 의도를 명확히 했습니다.")
+            String conversationFlow,
+
+            @Schema(description = "소통 패턴 분석", example = "추임새가 많아 자신감 부족이 느껴지지만 정중한 태도를 유지했습니다.")
+            String communicationPattern,
+
+            @Schema(description = "전반적인 개선점 목록")
+            List<OverallImprovement> overallImprovements
+    ) {
+    }
+
+    /**
+     * 전반적인 개선점
+     */
+    @Schema(description = "전반적인 개선점")
+    @Builder
+    public record OverallImprovement(
+            @Schema(description = "개선 카테고리", example = "confidence", allowableValues = {"conversation_flow", "confidence", "structure"})
+            String category,
+
+            @Schema(description = "개선 영역 설명", example = "자신감 있는 소통")
+            String description,
+
+            @Schema(description = "구체적인 개선 방법", example = "말하기 전에 한 번 정리하고 차분하게 말씀해보세요.")
+            String suggestion
+    ) {
+    }
+
+    /**
+     * 문장별 분석 결과
+     */
+    @Schema(description = "문장별 분석 결과")
+    @Builder
+    public record SentenceAnalysis(
+            @Schema(description = "문장 순서", example = "1")
+            Integer sequence,
+
+            @Schema(description = "원본 문장", example = "음... 그... 팀장님, 저기... 혹시...")
+            String content,
+
+            @Schema(description = "발견된 문제점들")
+            List<SentenceIssue> issues,
+
+            @Schema(description = "개선된 문장", example = "팀장님, 내일 개인적인 일이 생겨서 휴가를 요청드리고 싶습니다.")
+            String improvedVersion
+    ) {
+    }
+
+    /**
+     * 문장별 문제점
+     */
+    @Schema(description = "문장별 문제점")
+    @Builder
+    public record SentenceIssue(
+            @Schema(description = "문제 유형", example = "filler_words", allowableValues = {"filler_words", "incomplete_sentence", "vague_explanation"})
+            String type,
+
+            @Schema(description = "문제 발생 횟수", example = "6")
+            Integer count,
+
+            @Schema(description = "문제의 심각도", example = "high", allowableValues = {"high", "medium", "low"})
+            String impact,
+
+            @Schema(description = "개선 제안", example = "추임새를 줄이고 한 번에 명확히 말씀하세요")
+            String suggestion
+    ) {
+    }
+
+    /**
+     * 대화 전체 개선안
+     */
+    @Schema(description = "대화 전체 개선안")
+    @Builder
+    public record ConversationImprovement(
+            @Schema(description = "현재 대화 패턴", example = "추임새 → 불완전한 설명 → 재설명 → 불완전한 확인")
+            String currentPattern,
+
+            @Schema(description = "이상적인 대화 패턴", example = "인사 → 명확한 요청 → 간단한 이유 → 감사 표현")
+            String improvedPattern,
+
+            @Schema(description = "전체 대화 개선 예시", example = "팀장님, 안녕하세요. 내일 개인적인 급한 일이 생겨서 연차 휴가를 요청드리고 싶습니다. 승인해주시면 감사하겠습니다.")
+            String fullImprovedDialogue
+    ) {
+    }
 }

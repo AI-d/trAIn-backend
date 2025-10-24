@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,13 +25,11 @@ import java.util.stream.Collectors;
 import static com.aid.train.backend.global.exception.enums.ErrorCode.*;
 
 /**
- * 피드백 비즈니스 로직 서비스
- *
- * 역할:
- * - 피드백 생성 및 관리
- * - 개선안 선택 처리
- * - 피드백 히스토리 조회
- * - 통계 데이터 계산
+ * 피드백 서비스 (확장 버전)
+ * <p>
+ * TJ님 요구사항 반영:
+ * - 기존 기능: 호환성 유지
+ * - 새로운 기능: 종합 대화 분석 포함
  *
  * @author 왕택준
  * @since 1.0.0
@@ -48,20 +45,12 @@ public class FeedbackService {
     private final FeedbackPromptService feedbackPromptService;
 
     /**
-     * AI를 통해 자동으로 피드백을 생성합니다.
-     *
-     * 처리 순서:
-     * 1. 세션 조회 및 완료 상태 확인
-     * 2. 기존 피드백 중복 확인
-     * 3. AI에게 대화 분석 요청
-     * 4. AI 응답을 파싱하여 피드백 생성
-     *
-     * @param sessionId 세션 ID
-     * @return 생성된 피드백 응답
-     * @throws TrainException 세션을 찾을 수 없거나 이미 피드백이 존재하는 경우
+     * AI 종합 피드백 생성 (TJ님이 원하는 기능)
+     * <p>
+     * 전체 대화 흐름 + 개별 문장 분석 포함
      */
     public FeedbackResponse generateFeedbackWithAI(String sessionId) {
-        log.info("AI 자동 피드백 생성 시작 - sessionId: {}", sessionId);
+        log.info("AI 종합 피드백 생성 시작 - sessionId: {}", sessionId);
 
         // 1. 세션 조회 및 검증
         DialogueSession session = dialogueSessionService.getSessionWithUserAndScenario(sessionId);
@@ -79,54 +68,187 @@ public class FeedbackService {
             throw new TrainException(FEEDBACK_ALREADY_EXISTS);
         }
 
-        // 3. AI를 통한 피드백 생성
-        FeedbackCreateRequest aiRequest = feedbackPromptService.generateFeedbackFromAI(session);
+        try {
+            // 2. AI 1회 호출로 모든 분석 생성
+            FeedbackResponse comprehensiveFeedback = feedbackPromptService.generateComprehensiveFeedback(session);
 
-        // 4. 기존 createFeedback 메서드 재사용
-        return createFeedback(aiRequest);
+            // 3. DB 저장용 객체 생성 (AI 호출 없이)
+            FeedbackCreateRequest basicRequest = FeedbackCreateRequest.builder()
+                    .sessionId(sessionId)
+                    .totalScore(comprehensiveFeedback.totalScore())
+                    .speechRateScore(comprehensiveFeedback.speechRateScore())
+                    .fillerWordsScore(comprehensiveFeedback.fillerWordsScore())
+                    .politenessScore(comprehensiveFeedback.politenessScore())
+                    .clarityScore(comprehensiveFeedback.clarityScore())
+                    .improvementPoints(comprehensiveFeedback.improvementPoints())
+                    .originalTranscript(comprehensiveFeedback.originalTranscript())
+                    .alternativeA(comprehensiveFeedback.alternativeA())
+                    .alternativeB(comprehensiveFeedback.alternativeB())
+                    .alternativeC(comprehensiveFeedback.alternativeC())
+                    .build();
+
+            // 4. DB 저장
+            Feedback savedFeedback = createFeedbackFromRequest(basicRequest, session);
+
+            // 5. 저장된 ID 포함해서 응답 생성
+            return FeedbackResponse.withComprehensiveAnalysis(
+                    savedFeedback,
+                    comprehensiveFeedback.overallAnalysis(),
+                    comprehensiveFeedback.sentenceAnalyses(),
+                    comprehensiveFeedback.conversationImprovement()
+            );
+        } catch (Exception e) {
+            log.error("AI 피드백 생성 실패 - sessionId: {}", sessionId, e);
+            throw new TrainException(AI_ANALYSIS_FAILED, "AI 피드백 생성에 실패했습니다: " + e.getMessage());
+        }
     }
 
     /**
-     * 새로운 피드백을 생성합니다.
-     *
-     * 처리 순서:
-     * 1. 세션 존재 여부 및 완료 상태 확인
-     * 2. 기존 피드백 중복 확인
-     * 3. 점수 유효성 검증
-     * 4. 피드백 엔티티 생성 및 저장
-     *
-     * @param request 피드백 생성 요청
-     * @return 생성된 피드백 응답
-     * @throws TrainException 세션을 찾을 수 없거나 이미 피드백이 존재하는 경우
+     * 피드백 조회 (기본 정보만, 종합 분석 제외)
      */
-    public FeedbackResponse createFeedback(FeedbackCreateRequest request) {
-        log.info("피드백 생성 시작 - sessionId: {}", request.sessionId());
+    @Transactional(readOnly = true)
+    public FeedbackResponse getFeedback(String sessionId) {
+        log.info("피드백 조회 - sessionId: {}", sessionId);
 
-        // 1. 세션 조회 및 검증
-        DialogueSession session = dialogueSessionService.getSessionWithUserAndScenario(request.sessionId());
+        Feedback feedback = feedbackRepository.findByDialogueSessionSessionId(sessionId)
+                .orElseThrow(() -> {
+                    log.error("피드백을 찾을 수 없음 - sessionId: {}", sessionId);
+                    return new TrainException(FEEDBACK_NOT_FOUND);
+                });
 
-        // 세션이 완료되었는지 확인
-        if (!session.getStatus().isCompleted()) {
-            log.error("완료되지 않은 세션에 대한 피드백 생성 시도 - sessionId: {}, status: {}",
-                    request.sessionId(), session.getStatus());
-            throw new TrainException(SESSION_INVALID_STATUS);
+        log.info("피드백 조회 완료 - sessionId: {}, feedbackId: {}", sessionId, feedback.getId());
+
+        return FeedbackResponse.from(feedback);
+    }
+
+    /**
+     * 개선안 선택
+     */
+    public FeedbackResponse chooseAlternative(String sessionId, FeedbackChoiceRequest request) {
+        log.info("개선안 선택 - sessionId: {}, alternative: {}", sessionId, request.chosenAlternative());
+
+        Feedback feedback = feedbackRepository.findByDialogueSessionSessionId(sessionId)
+                .orElseThrow(() -> {
+                    log.error("피드백을 찾을 수 없음 - sessionId: {}", sessionId);
+                    return new TrainException(FEEDBACK_NOT_FOUND);
+                });
+
+        // 개선안 선택 처리
+        if (request.chosenAlternative() == Feedback.ChosenAlternative.CUSTOM) {
+            // 사용자 직접 작성
+            if (request.finalChoice() == null || request.finalChoice().trim().isEmpty()) {
+                throw new TrainException(INVALID_INPUT_VALUE, "사용자 정의 개선안은 내용이 필요합니다.");
+            }
+            feedback.setCustomChoice(request.finalChoice());
+        } else {
+            // A, B, C 중 선택
+            feedback.chooseAlternative(request.chosenAlternative());
         }
 
-        // 2. 중복 피드백 확인
-        if (feedbackRepository.existsByDialogueSessionSessionId(request.sessionId())) {
-            log.error("이미 피드백이 존재하는 세션 - sessionId: {}", request.sessionId());
-            throw new TrainException(FEEDBACK_ALREADY_EXISTS);
+        Feedback savedFeedback = feedbackRepository.save(feedback);
+
+        log.info("개선안 선택 완료 - sessionId: {}, alternative: {}",
+                sessionId, request.chosenAlternative());
+
+        return FeedbackResponse.from(savedFeedback);
+    }
+
+    /**
+     * 사용자 피드백 히스토리 조회 (페이징)
+     */
+    @Transactional(readOnly = true)
+    public Page<FeedbackHistoryResponse> getFeedbackHistory(Long userId, Pageable pageable) {
+        log.info("피드백 히스토리 조회 (페이징) - userId: {}, page: {}, size: {}",
+                userId, pageable.getPageNumber(), pageable.getPageSize());
+
+        Page<Feedback> feedbacks = feedbackRepository.findByUserId(userId, pageable);
+
+        return feedbacks.map(FeedbackHistoryResponse::from);
+    }
+
+    /**
+     * 사용자 전체 피드백 히스토리 조회
+     */
+    @Transactional(readOnly = true)
+    public List<FeedbackHistoryResponse> getAllFeedbackHistory(Long userId) {
+        log.info("전체 피드백 히스토리 조회 - userId: {}", userId);
+
+        List<Feedback> feedbacks = feedbackRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        return feedbacks.stream()
+                .map(FeedbackHistoryResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 사용자 피드백 통계 조회
+     */
+    @Transactional(readOnly = true)
+    public FeedbackStatsResponse getFeedbackStats(Long userId) {
+        log.info("피드백 통계 조회 - userId: {}", userId);
+
+        // 기본 통계 계산
+        long totalCount = feedbackRepository.countByUserId(userId);
+        if (totalCount == 0) {
+            return createEmptyStats();
         }
 
-        // 3. 점수 합계 검증
-        int calculatedTotal = request.speechRateScore() + request.fillerWordsScore()
-                + request.politenessScore() + request.clarityScore();
-        if (!request.totalScore().equals(calculatedTotal)) {
-            log.error("점수 합계 불일치 - expected: {}, actual: {}", request.totalScore(), calculatedTotal);
-            throw new TrainException(INVALID_INPUT_VALUE, "점수 합계가 올바르지 않습니다.");
-        }
+        Double averageScore = feedbackRepository.findAverageScoreByUserId(userId);
+        Object[] detailedAverages = feedbackRepository.findDetailedScoreAveragesByUserId(userId);
 
-        // 4. 피드백 엔티티 생성
+        // 최근 통계
+        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
+        LocalDateTime monthAgo = LocalDateTime.now().minusDays(30);
+
+        List<Feedback> recentWeekFeedbacks = feedbackRepository.findByUserIdAndDateRange(userId, weekAgo, LocalDateTime.now());
+        List<Feedback> recentMonthFeedbacks = feedbackRepository.findByUserIdAndDateRange(userId, monthAgo, LocalDateTime.now());
+
+        // 완료율 통계
+        List<Feedback> allFeedbacks = feedbackRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        long completedCount = allFeedbacks.stream()
+                .filter(Feedback::isChoiceComplete)
+                .count();
+
+        // 등급별 분포 계산
+        FeedbackStatsResponse.GradeDistribution gradeDistribution = calculateGradeDistribution(allFeedbacks);
+
+        // 월별 추이 계산 (최근 6개월)
+        List<FeedbackStatsResponse.MonthlyScore> monthlyScores = calculateMonthlyScores(allFeedbacks);
+
+        // 최고/최저 점수
+        int maxScore = allFeedbacks.stream()
+                .mapToInt(Feedback::getTotalScore)
+                .max()
+                .orElse(0);
+
+        int minScore = allFeedbacks.stream()
+                .mapToInt(Feedback::getTotalScore)
+                .min()
+                .orElse(0);
+
+        return FeedbackStatsResponse.of(
+                totalCount,
+                averageScore != null ? Math.round(averageScore * 10.0) / 10.0 : 0.0,
+                detailedAverages[0] != null ? Math.round(((Number) detailedAverages[0]).doubleValue() * 10.0) / 10.0 : 0.0,
+                detailedAverages[1] != null ? Math.round(((Number) detailedAverages[1]).doubleValue() * 10.0) / 10.0 : 0.0,
+                detailedAverages[2] != null ? Math.round(((Number) detailedAverages[2]).doubleValue() * 10.0) / 10.0 : 0.0,
+                detailedAverages[3] != null ? Math.round(((Number) detailedAverages[3]).doubleValue() * 10.0) / 10.0 : 0.0,
+                maxScore,
+                minScore,
+                (long) recentWeekFeedbacks.size(),
+                (long) recentMonthFeedbacks.size(),
+                completedCount,
+                totalCount - completedCount,
+                gradeDistribution,
+                monthlyScores
+        );
+    }
+
+    // ========================================
+    // Private Helper Methods
+    // ========================================
+
+    private Feedback createFeedbackFromRequest(FeedbackCreateRequest request, DialogueSession session) {
         Feedback feedback = Feedback.builder()
                 .dialogueSession(session)
                 .totalScore(request.totalScore())
@@ -143,180 +265,9 @@ public class FeedbackService {
                 .aiRawResponse(request.aiRawResponse())
                 .build();
 
-        // 5. DB 저장
-        Feedback savedFeedback = feedbackRepository.save(feedback);
-        feedbackRepository.flush(); // 즉시 DB 반영
-
-        log.info("피드백 생성 완료 - feedbackId: {}, sessionId: {}, totalScore: {}",
-                savedFeedback.getId(), request.sessionId(), request.totalScore());
-
-        return FeedbackResponse.from(savedFeedback);
+        return feedbackRepository.save(feedback);
     }
 
-    /**
-     * 사용자가 개선안을 선택합니다.
-     *
-     * @param sessionId 세션 ID
-     * @param request 선택 요청
-     * @return 업데이트된 피드백 응답
-     * @throws TrainException 피드백을 찾을 수 없거나 요청이 유효하지 않은 경우
-     */
-    public FeedbackResponse choosealternative(String sessionId, FeedbackChoiceRequest request) {
-        log.info("개선안 선택 시작 - sessionId: {}, choice: {}", sessionId, request.chosenAlternative());
-
-        // 1. 피드백 조회
-        Feedback feedback = getFeedbackBySessionId(sessionId);
-
-        // 2. 요청 유효성 검증
-        if (!request.isValid()) {
-            log.error("유효하지 않은 선택 요청 - sessionId: {}, choice: {}", sessionId, request.chosenAlternative());
-            throw new TrainException(INVALID_INPUT_VALUE, "CUSTOM 선택 시 최종안은 필수입니다.");
-        }
-
-        // 3. 개선안 설정
-        if (request.chosenAlternative() == Feedback.ChosenAlternative.CUSTOM) {
-            feedback.setCustomChoice(request.finalChoice());
-        } else {
-            feedback.choosealternative(request.chosenAlternative());
-        }
-
-        log.info("개선안 선택 완료 - sessionId: {}, choice: {}", sessionId, request.chosenAlternative());
-
-        return FeedbackResponse.from(feedback);
-    }
-
-    /**
-     * 특정 세션의 피드백을 조회합니다.
-     *
-     * @param sessionId 세션 ID
-     * @return 피드백 응답
-     * @throws TrainException 피드백을 찾을 수 없는 경우
-     */
-    @Transactional(readOnly = true)
-    public FeedbackResponse getFeedback(String sessionId) {
-        log.info("피드백 조회 - sessionId: {}", sessionId);
-
-        Feedback feedback = getFeedbackBySessionId(sessionId);
-        return FeedbackResponse.from(feedback);
-    }
-
-    /**
-     * 특정 사용자의 피드백 히스토리를 조회합니다.
-     *
-     * @param userId 사용자 ID
-     * @param pageable 페이징 정보
-     * @return 피드백 히스토리 목록
-     */
-    @Transactional(readOnly = true)
-    public Page<FeedbackHistoryResponse> getFeedbackHistory(Long userId, Pageable pageable) {
-        log.info("피드백 히스토리 조회 - userId: {}, page: {}, size: {}",
-                userId, pageable.getPageNumber(), pageable.getPageSize());
-
-        Page<Feedback> feedbacks = feedbackRepository.findByUserId(userId, pageable);
-
-        return feedbacks.map(FeedbackHistoryResponse::from);
-    }
-
-    /**
-     * 특정 사용자의 피드백 히스토리를 전체 조회합니다 (페이징 없음).
-     *
-     * @param userId 사용자 ID
-     * @return 피드백 히스토리 목록
-     */
-    @Transactional(readOnly = true)
-    public List<FeedbackHistoryResponse> getAllFeedbackHistory(Long userId) {
-        log.info("전체 피드백 히스토리 조회 - userId: {}", userId);
-
-        List<Feedback> feedbacks = feedbackRepository.findByUserIdOrderByCreatedAtDesc(userId);
-
-        return feedbacks.stream()
-                .map(FeedbackHistoryResponse::from)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 특정 사용자의 피드백 통계를 조회합니다.
-     *
-     * @param userId 사용자 ID
-     * @return 피드백 통계 응답
-     */
-    @Transactional(readOnly = true)
-    public FeedbackStatsResponse getFeedbackStats(Long userId) {
-        log.info("피드백 통계 조회 - userId: {}", userId);
-
-        // 기본 통계 조회
-        Long totalCount = feedbackRepository.countByUserId(userId);
-        if (totalCount == 0) {
-            return createEmptyStats();
-        }
-
-        Double averageScore = feedbackRepository.findAverageScoreByUserId(userId);
-        Object[] detailedAverages = feedbackRepository.findDetailedScoreAveragesByUserId(userId);
-
-        // 최고/최저 점수 계산
-        List<Feedback> allFeedbacks = feedbackRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        Integer maxScore = allFeedbacks.stream()
-                .mapToInt(Feedback::getTotalScore)
-                .max()
-                .orElse(0);
-        Integer minScore = allFeedbacks.stream()
-                .mapToInt(Feedback::getTotalScore)
-                .min()
-                .orElse(0);
-
-        // 최근 기간별 통계
-        LocalDateTime weekAgo = LocalDateTime.now().minusWeeks(1);
-        LocalDateTime monthAgo = LocalDateTime.now().minusMonths(1);
-
-        Long recentWeekCount = (long) feedbackRepository.findByUserIdAndDateRange(userId, weekAgo, LocalDateTime.now()).size();
-        Long recentMonthCount = (long) feedbackRepository.findByUserIdAndDateRange(userId, monthAgo, LocalDateTime.now()).size();
-
-        // 완료/미완료 통계
-        Long incompleteCount = (long) feedbackRepository.findIncompleteByUserId(userId).size();
-        Long completedCount = totalCount - incompleteCount;
-
-        // 등급별 분포 계산
-        FeedbackStatsResponse.GradeDistribution gradeDistribution = calculateGradeDistribution(allFeedbacks);
-
-        // 월별 점수 추이 계산 (최근 6개월)
-        List<FeedbackStatsResponse.MonthlyScore> monthlyScores = calculateMonthlyScores(userId);
-
-        return FeedbackStatsResponse.of(
-                totalCount,
-                averageScore,
-                (Double) detailedAverages[0], // speechRateScore
-                (Double) detailedAverages[1], // fillerWordsScore
-                (Double) detailedAverages[2], // politenessScore
-                (Double) detailedAverages[3], // clarityScore
-                maxScore,
-                minScore,
-                recentWeekCount,
-                recentMonthCount,
-                completedCount,
-                incompleteCount,
-                gradeDistribution,
-                monthlyScores
-        );
-    }
-
-    /**
-     * sessionId로 피드백을 조회합니다 (내부용).
-     *
-     * @param sessionId 세션 ID
-     * @return 피드백 엔티티
-     * @throws TrainException 피드백을 찾을 수 없는 경우
-     */
-    private Feedback getFeedbackBySessionId(String sessionId) {
-        return feedbackRepository.findByDialogueSessionSessionId(sessionId)
-                .orElseThrow(() -> {
-                    log.error("피드백을 찾을 수 없음 - sessionId: {}", sessionId);
-                    return new TrainException(FEEDBACK_NOT_FOUND);
-                });
-    }
-
-    /**
-     * 빈 통계 응답을 생성합니다.
-     */
     private FeedbackStatsResponse createEmptyStats() {
         return FeedbackStatsResponse.of(
                 0L, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0L, 0L, 0L, 0L,
@@ -326,15 +277,12 @@ public class FeedbackService {
         );
     }
 
-    /**
-     * 등급별 분포를 계산합니다.
-     */
     private FeedbackStatsResponse.GradeDistribution calculateGradeDistribution(List<Feedback> feedbacks) {
-        long gradeA = feedbacks.stream().mapToInt(Feedback::getTotalScore).filter(score -> score >= 90).count();
-        long gradeB = feedbacks.stream().mapToInt(Feedback::getTotalScore).filter(score -> score >= 80 && score < 90).count();
-        long gradeC = feedbacks.stream().mapToInt(Feedback::getTotalScore).filter(score -> score >= 70 && score < 80).count();
-        long gradeD = feedbacks.stream().mapToInt(Feedback::getTotalScore).filter(score -> score >= 60 && score < 70).count();
-        long gradeF = feedbacks.stream().mapToInt(Feedback::getTotalScore).filter(score -> score < 60).count();
+        long gradeA = feedbacks.stream().filter(f -> f.getTotalScore() >= 90).count();
+        long gradeB = feedbacks.stream().filter(f -> f.getTotalScore() >= 80 && f.getTotalScore() < 90).count();
+        long gradeC = feedbacks.stream().filter(f -> f.getTotalScore() >= 70 && f.getTotalScore() < 80).count();
+        long gradeD = feedbacks.stream().filter(f -> f.getTotalScore() >= 60 && f.getTotalScore() < 70).count();
+        long gradeF = feedbacks.stream().filter(f -> f.getTotalScore() < 60).count();
 
         return FeedbackStatsResponse.GradeDistribution.builder()
                 .gradeA(gradeA)
@@ -345,36 +293,29 @@ public class FeedbackService {
                 .build();
     }
 
-    /**
-     * 월별 점수 추이를 계산합니다 (최근 6개월).
-     */
-    private List<FeedbackStatsResponse.MonthlyScore> calculateMonthlyScores(Long userId) {
+    private List<FeedbackStatsResponse.MonthlyScore> calculateMonthlyScores(List<Feedback> feedbacks) {
+        // 최근 6개월 월별 통계 계산
         List<FeedbackStatsResponse.MonthlyScore> monthlyScores = new ArrayList<>();
 
+        LocalDateTime now = LocalDateTime.now();
         for (int i = 5; i >= 0; i--) {
-            YearMonth targetMonth = YearMonth.now().minusMonths(i);
-            LocalDateTime startOfMonth = targetMonth.atDay(1).atStartOfDay();
-            LocalDateTime endOfMonth = targetMonth.atEndOfMonth().atTime(23, 59, 59);
+            LocalDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+            LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
 
-            List<Feedback> monthlyFeedbacks = feedbackRepository.findByUserIdAndDateRange(
-                    userId, startOfMonth, endOfMonth);
+            List<Feedback> monthFeedbacks = feedbacks.stream()
+                    .filter(f -> f.getCreatedAt().isAfter(monthStart) && f.getCreatedAt().isBefore(monthEnd))
+                    .toList();
 
-            if (!monthlyFeedbacks.isEmpty()) {
-                double average = monthlyFeedbacks.stream()
+            if (!monthFeedbacks.isEmpty()) {
+                double avgScore = monthFeedbacks.stream()
                         .mapToInt(Feedback::getTotalScore)
                         .average()
                         .orElse(0.0);
 
                 monthlyScores.add(FeedbackStatsResponse.MonthlyScore.builder()
-                        .yearMonth(targetMonth.toString())
-                        .averageScore(average)
-                        .count((long) monthlyFeedbacks.size())
-                        .build());
-            } else {
-                monthlyScores.add(FeedbackStatsResponse.MonthlyScore.builder()
-                        .yearMonth(targetMonth.toString())
-                        .averageScore(0.0)
-                        .count(0L)
+                        .yearMonth(String.format("%04d-%02d", monthStart.getYear(), monthStart.getMonthValue()))
+                        .averageScore(Math.round(avgScore * 10.0) / 10.0)
+                        .count((long) monthFeedbacks.size())
                         .build());
             }
         }
