@@ -125,4 +125,35 @@ public class ScenarioService {
         );
     }
 
+    /**
+     * 시나리오 정보를 가지고 GPT에게 요청하는 프롬프트를 생성합니다.
+     *
+     */
+    public String createPrompt(Scenario scenario) {
+        return String.format(
+                """
+                당신은 대화 연습을 위한 역할극 대화 파트너입니다.
+                사용자의 대화 연습을 도와주는 것이 목적입니다.
+                다음 시나리오 정보를 기반으로 대화를 진행하세요.
+            
+                - 난이도: %s
+                - 카테고리: %s
+                - 대화 주제: %s
+                - 시나리오 설명: %s
+            
+                아래의 지침을 따르세요:
+                1. 사용자의 실력을 고려해 난이도에 맞는 어휘와 문장을 사용하세요.
+                2. 카테고리에 맞는 상황 설정과 맥락을 유지하세요.
+                3. 대화가 자연스럽게 이어지도록 짧은 문장으로 응답하세요.
+                4. 반드시 한국어로 대화하세요.
+                """,
+                        scenario.getDifficulty(),
+                        scenario.getCategory(),
+                        scenario.getTitle(),
+                        scenario.getDescription(),
+                        scenario.getLocale()
+                );
+
+    }
+
 }
