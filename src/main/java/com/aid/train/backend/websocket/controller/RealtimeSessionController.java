@@ -20,7 +20,7 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/realtime")
+@RequestMapping("/api/v1/realtime")
 @RequiredArgsConstructor
 public class RealtimeSessionController {
 
