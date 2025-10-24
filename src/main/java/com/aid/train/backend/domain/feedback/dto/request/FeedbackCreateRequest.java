@@ -20,9 +20,9 @@ import lombok.Builder;
  * </p>
  *
  * @author 왕택준
- * @since 1.0.0
  * @see com.aid.train.backend.domain.feedback.controller.FeedbackController#createFeedback(FeedbackCreateRequest)
  * @see com.aid.train.backend.domain.feedback.service.FeedbackPromptService#generateFeedbackFromAI(com.aid.train.backend.domain.session.entity.DialogueSession)
+ * @since 1.0.0
  */
 @Schema(description = "피드백 생성 요청")
 @Builder
@@ -58,10 +58,10 @@ public record FeedbackCreateRequest(
          * 상황에 맞는 말하기 속도를 유지했는지 분석합니다.
          * </p>
          */
-        @Schema(description = "발화속도 점수 (0-30)", example = "23", minimum = "0", maximum = "30", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "발화속도 점수 (0-30)", example = "23", minimum = "0", maximum = "25", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotNull(message = "발화속도 점수는 필수입니다.")
         @Min(value = 0, message = "발화속도 점수는 0 이상이어야 합니다.")
-        @Max(value = 30, message = "발화속도 점수는 30 이하여야 합니다.")
+        @Max(value = 30, message = "발화속도 점수는 25 이하여야 합니다.")
         Integer speechRateScore,
 
         /**
@@ -71,10 +71,10 @@ public record FeedbackCreateRequest(
          * 점수가 높을수록 추임새가 적어 좋은 것입니다.
          * </p>
          */
-        @Schema(description = "추임새 점수 (0-20) - 높을수록 좋음", example = "12", minimum = "0", maximum = "20", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "추임새 점수 (0-25) - 높을수록 좋음", example = "12", minimum = "0", maximum = "25", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotNull(message = "추임새 점수는 필수입니다.")
         @Min(value = 0, message = "추임새 점수는 0 이상이어야 합니다.")
-        @Max(value = 20, message = "추임새 점수는 20 이하여야 합니다.")
+        @Max(value = 20, message = "추임새 점수는 25 이하여야 합니다.")
         Integer fillerWordsScore,
 
         /**

@@ -13,9 +13,8 @@ import java.util.Optional;
 
 /**
  * Feedback Repository
- *
+ * <p>
  * 피드백 데이터에 접근하기 위한 Repository 인터페이스
- * 옵션 2 (단순 조회 모델) 기반으로 구현됨
  *
  * @author 왕택준
  * @since 1.0.0
@@ -61,7 +60,7 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     /**
      * 특정 사용자의 피드백을 페이징하여 조회합니다.
      *
-     * @param userId 사용자 ID
+     * @param userId   사용자 ID
      * @param pageable 페이징 정보
      * @return 페이징된 피드백 목록
      */
@@ -86,7 +85,7 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     /**
      * 특정 사용자의 특정 시나리오 피드백을 조회합니다.
      *
-     * @param userId 사용자 ID
+     * @param userId     사용자 ID
      * @param scenarioId 시나리오 ID
      * @return 피드백 목록 (최신순)
      */
@@ -102,9 +101,9 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     /**
      * 특정 기간 내 생성된 피드백을 조회합니다.
      *
-     * @param userId 사용자 ID
+     * @param userId    사용자 ID
      * @param startDate 시작 날짜
-     * @param endDate 종료 날짜
+     * @param endDate   종료 날짜
      * @return 피드백 목록
      */
     @Query("SELECT f FROM Feedback f " +
@@ -131,9 +130,9 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     /**
      * 특정 사용자의 특정 기간 평균 점수를 계산합니다.
      *
-     * @param userId 사용자 ID
+     * @param userId    사용자 ID
      * @param startDate 시작 날짜
-     * @param endDate 종료 날짜
+     * @param endDate   종료 날짜
      * @return 평균 점수 (데이터가 없으면 null)
      */
     @Query("SELECT AVG(f.totalScore) FROM Feedback f " +
@@ -165,15 +164,14 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
      * 최근 학습 현황 표시용
      *
      * @param userId 사용자 ID
-     * @param limit 조회할 개수
+     * @param limit  조회할 개수
      * @return 최근 피드백 목록
      */
     @Query("SELECT f FROM Feedback f " +
             "JOIN FETCH f.dialogueSession s " +
             "JOIN FETCH s.scenario sc " +
             "WHERE s.user.id = :userId " +
-            "ORDER BY f.createdAt DESC " +
-            "LIMIT :limit")
+            "ORDER BY f.createdAt DESC ")
     List<Feedback> findRecentFeedbacksByUserId(@Param("userId") Long userId,
                                                @Param("limit") int limit);
 
@@ -181,7 +179,7 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
      * 특정 점수 이상의 피드백을 조회합니다.
      * 성취도 분석용
      *
-     * @param userId 사용자 ID
+     * @param userId   사용자 ID
      * @param minScore 최소 점수
      * @return 조건에 맞는 피드백 목록
      */

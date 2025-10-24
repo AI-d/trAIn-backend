@@ -28,12 +28,22 @@ import java.util.List;
 
 /**
  * 피드백 관리 컨트롤러
- * <p>
- * 역할:
- * - 피드백 생성 (AI가 분석 완료 후 호출)
- * - 개선안 선택 (사용자가 A, B, C 또는 직접 수정)
- * - 피드백 조회 및 히스토리 관리
- * - 통계 데이터 제공
+ *
+ * <p>대화 피드백의 생성/조회/선택/통계를 담당하는 HTTP 엔드포인트를 제공합니다.</p>
+ *
+ * <p><b>역할</b></p>
+ * <ul>
+ *   <li>피드백 생성: AI 분석 완료 후 단일 호출로 피드백을 생성</li>
+ *   <li>개선안 선택: A/B/C 또는 사용자 정의(CUSTOM) 선택 반영</li>
+ *   <li>피드백 조회: 단건 및 사용자 히스토리/전체 히스토리 조회</li>
+ *   <li>통계 제공: 사용자별 점수 평균/추이/등급 분포 등</li>
+ * </ul>
+ *
+ * <p><b>응답 규격</b></p>
+ * <ul>
+ *   <li>성공: {@link ApiResponse#success(String, Object)} 포맷</li>
+ *   <li>실패: {@link ApiResponse#error(ErrorCode)} 또는 {@link ApiResponse#error(ErrorCode, String)}</li>
+ * </ul>
  *
  * @author 왕택준
  * @since 1.0.0
@@ -49,12 +59,12 @@ public class FeedbackController {
 
     /**
      * AI를 통해 자동으로 피드백을 생성합니다.
-     * <p>
-     * 대화 세션이 완료된 후 호출하는 API입니다.
-     * AI가 전체 대화를 분석하여 자동으로 점수와 개선안을 생성합니다.
      *
-     * @param sessionId 세션 ID
-     * @return 생성된 피드백 정보
+     * <p>대화 세션이 <b>완료된 후</b> 호출하는 엔드포인트입니다. AI가 전체 대화를 분석하여
+     * 점수 및 3가지 스타일의 개선안을 생성합니다.</p>
+     *
+     * @param sessionId 피드백을 생성할 세션의 비즈니스 식별자
+     * @return 생성된 피드백 정보가 담긴 성공 응답
      */
     @Operation(
             summary = "AI 자동 피드백 생성",
@@ -120,8 +130,8 @@ public class FeedbackController {
     /**
      * 특정 세션의 피드백을 조회합니다.
      *
-     * @param sessionId 세션 ID
-     * @return 피드백 상세 정보
+     * @param sessionId 조회할 세션의 비즈니스 식별자
+     * @return 피드백 상세 정보가 담긴 성공 응답
      */
     @Operation(
             summary = "피드백 조회",
@@ -173,12 +183,12 @@ public class FeedbackController {
 
     /**
      * 사용자가 개선안을 선택합니다.
-     * <p>
-     * A, B, C 중 하나를 선택하거나 직접 수정할 수 있습니다.
      *
-     * @param sessionId 세션 ID
-     * @param request   선택 요청
-     * @return 업데이트된 피드백 정보
+     * <p>A/B/C 중 하나를 선택하거나 사용자 정의(CUSTOM)로 직접 작성할 수 있습니다.</p>
+     *
+     * @param sessionId 선택 대상 세션의 비즈니스 식별자
+     * @param request   선택한 개선안 정보
+     * @return 업데이트된 피드백 정보가 담긴 성공 응답
      */
     @Operation(
             summary = "개선안 선택",
@@ -245,11 +255,11 @@ public class FeedbackController {
     }
 
     /**
-     * 특정 사용자의 피드백 히스토리를 조회합니다 (페이징).
+     * 특정 사용자의 피드백 히스토리를 페이징 조회합니다.
      *
-     * @param userId   사용자 ID
-     * @param pageable 페이징 정보
-     * @return 피드백 히스토리 목록
+     * @param userId   조회할 사용자 ID
+     * @param pageable 페이징 정보(페이지/크기/정렬)
+     * @return 페이징된 피드백 히스토리 성공 응답
      */
     @Operation(
             summary = "피드백 히스토리 조회",
@@ -295,10 +305,10 @@ public class FeedbackController {
     }
 
     /**
-     * 특정 사용자의 전체 피드백 히스토리를 조회합니다 (페이징 없음).
+     * 특정 사용자의 전체 피드백 히스토리를 조회합니다(페이징 없음).
      *
-     * @param userId 사용자 ID
-     * @return 전체 피드백 히스토리 목록
+     * @param userId 조회할 사용자 ID
+     * @return 전체 피드백 히스토리 성공 응답
      */
     @Operation(
             summary = "전체 피드백 히스토리 조회",
@@ -340,11 +350,11 @@ public class FeedbackController {
 
     /**
      * 특정 사용자의 피드백 통계를 조회합니다.
-     * <p>
-     * 성장 그래프 및 대시보드에 사용됩니다.
      *
-     * @param userId 사용자 ID
-     * @return 피드백 통계 정보
+     * <p>평균 점수, 성장 추이, 등급 분포, 최근 학습 현황 등의 데이터를 제공합니다.</p>
+     *
+     * @param userId 통계를 조회할 사용자 ID
+     * @return 피드백 통계 성공 응답
      */
     @Operation(
             summary = "피드백 통계 조회",

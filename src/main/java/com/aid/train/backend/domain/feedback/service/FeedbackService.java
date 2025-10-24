@@ -25,11 +25,22 @@ import java.util.stream.Collectors;
 import static com.aid.train.backend.global.exception.enums.ErrorCode.*;
 
 /**
- * 피드백 서비스 (확장 버전)
- * <p>
- * TJ님 요구사항 반영:
- * - 기존 기능: 호환성 유지
- * - 새로운 기능: 종합 대화 분석 포함
+ * 피드백 도메인의 생성/조회/통계 연산을 담당하는 서비스입니다.
+ *
+ * <p>특징</p>
+ * <ul>
+ *   <li><b>기존 호환 기능 유지</b>: 외부가 생성한 피드백 저장/조회 흐름을 보존함</li>
+ *   <li><b>확장 기능 제공</b>: AI 기반 종합 분석(전체 흐름 + 문장별 분석 + 개선안)을 생성하여 저장/응답함</li>
+ *   <li><b>트랜잭션 경계</b>: 클래스 레벨 {@code @Transactional}로 쓰기 기본, 조회 메서드는 {@code readOnly}로 분리</li>
+ * </ul>
+ *
+ * <p>예외</p>
+ * <ul>
+ *   <li>세션 상태가 완료가 아닌 경우: {@link TrainException}({@code SESSION_INVALID_STATUS})</li>
+ *   <li>이미 피드백이 존재하는 세션: {@link TrainException}({@code FEEDBACK_ALREADY_EXISTS})</li>
+ *   <li>AI 분석 실패: {@link TrainException}({@code AI_ANALYSIS_FAILED})</li>
+ *   <li>피드백 미존재: {@link TrainException}({@code FEEDBACK_NOT_FOUND})</li>
+ * </ul>
  *
  * @author 왕택준
  * @since 1.0.0
@@ -45,9 +56,20 @@ public class FeedbackService {
     private final FeedbackPromptService feedbackPromptService;
 
     /**
-     * AI 종합 피드백 생성 (TJ님이 원하는 기능)
-     * <p>
-     * 전체 대화 흐름 + 개별 문장 분석 포함
+     * AI를 이용해 단일 호출로 종합 피드백을 생성하고 저장한 뒤, 저장 결과에 종합 분석을 결합하여 반환합니다.
+     *
+     * <p>동작 순서</p>
+     * <ol>
+     *   <li>세션 로드 및 완료 상태 검증</li>
+     *   <li>기존 피드백 존재 여부 검증</li>
+     *   <li>AI 종합 분석 생성(전체/문장별/개선안)</li>
+     *   <li>DB 저장을 위한 최소 필드로 {@link FeedbackCreateRequest} 구성 및 저장</li>
+     *   <li>저장된 엔티티 + 분석 결과를 결합하여 {@link FeedbackResponse} 반환</li>
+     * </ol>
+     *
+     * @param sessionId 분석 및 피드백 생성 대상 세션 ID
+     * @return 저장된 피드백의 식별자·점수·개선안과 함께 종합 분석이 포함된 응답
+     * @throws TrainException 세션 상태가 완료가 아니거나, 이미 피드백이 존재하거나, AI 분석에 실패한 경우 발생
      */
     public FeedbackResponse generateFeedbackWithAI(String sessionId) {
         log.info("AI 종합 피드백 생성 시작 - sessionId: {}", sessionId);
@@ -70,7 +92,7 @@ public class FeedbackService {
 
         try {
             // 2. AI 1회 호출로 모든 분석 생성
-            FeedbackResponse comprehensiveFeedback = feedbackPromptService.generateComprehensiveFeedback(session);
+            FeedbackResponse comprehensiveFeedback = feedbackPromptService.generateFeedbackFromAI(session);
 
             // 3. DB 저장용 객체 생성 (AI 호출 없이)
             FeedbackCreateRequest basicRequest = FeedbackCreateRequest.builder()
@@ -104,7 +126,11 @@ public class FeedbackService {
     }
 
     /**
-     * 피드백 조회 (기본 정보만, 종합 분석 제외)
+     * 세션 ID로 피드백을 조회합니다(종합 분석 필드 제외).
+     *
+     * @param sessionId 조회 대상 세션 ID
+     * @return 기본 정보만 포함한 {@link FeedbackResponse}
+     * @throws TrainException 해당 세션의 피드백이 없을 때 발생({@code FEEDBACK_NOT_FOUND})
      */
     @Transactional(readOnly = true)
     public FeedbackResponse getFeedback(String sessionId) {
@@ -122,7 +148,18 @@ public class FeedbackService {
     }
 
     /**
-     * 개선안 선택
+     * 개선안(A/B/C 또는 CUSTOM)을 선택합니다.
+     *
+     * <p>규칙</p>
+     * <ul>
+     *   <li>{@code CUSTOM} 선택 시 요청 본문의 {@code finalChoice}가 필수</li>
+     *   <li>A/B/C 선택 시 해당 선택을 엔티티에 반영</li>
+     * </ul>
+     *
+     * @param sessionId 대상 세션 ID
+     * @param request   개선안 선택 요청
+     * @return 선택 결과가 반영된 {@link FeedbackResponse}
+     * @throws TrainException 피드백 미존재 또는 사용자 정의 내용 누락 시 발생
      */
     public FeedbackResponse chooseAlternative(String sessionId, FeedbackChoiceRequest request) {
         log.info("개선안 선택 - sessionId: {}, alternative: {}", sessionId, request.chosenAlternative());
@@ -154,7 +191,11 @@ public class FeedbackService {
     }
 
     /**
-     * 사용자 피드백 히스토리 조회 (페이징)
+     * 사용자 피드백 히스토리를 페이지 단위로 조회합니다.
+     *
+     * @param userId   사용자 ID
+     * @param pageable 페이지 정보(페이지 번호, 크기, 정렬)
+     * @return 페이지 형태의 {@link FeedbackHistoryResponse} 컬렉션
      */
     @Transactional(readOnly = true)
     public Page<FeedbackHistoryResponse> getFeedbackHistory(Long userId, Pageable pageable) {
@@ -167,7 +208,10 @@ public class FeedbackService {
     }
 
     /**
-     * 사용자 전체 피드백 히스토리 조회
+     * 사용자 전체 피드백 히스토리를 내림차순(생성일)으로 조회합니다.
+     *
+     * @param userId 사용자 ID
+     * @return 전체 히스토리 목록(최신 순)
      */
     @Transactional(readOnly = true)
     public List<FeedbackHistoryResponse> getAllFeedbackHistory(Long userId) {
@@ -181,7 +225,18 @@ public class FeedbackService {
     }
 
     /**
-     * 사용자 피드백 통계 조회
+     * 사용자 피드백에 대한 통계를 계산합니다.
+     *
+     * <p>포함 내용</p>
+     * <ul>
+     *   <li>총 개수, 평균 점수, 상세 항목별 평균(발화속도/추임새/공손도/명료성)</li>
+     *   <li>최근 7일/30일 건수, 개선안 선택 완료 수/미완료 수</li>
+     *   <li>등급 분포(A~F) 및 최근 6개월 월별 평균 추이</li>
+     *   <li>최고/최저 점수</li>
+     * </ul>
+     *
+     * @param userId 사용자 ID
+     * @return 계산된 통계 응답
      */
     @Transactional(readOnly = true)
     public FeedbackStatsResponse getFeedbackStats(Long userId) {
@@ -248,6 +303,13 @@ public class FeedbackService {
     // Private Helper Methods
     // ========================================
 
+    /**
+     * {@link FeedbackCreateRequest}와 세션 정보를 바탕으로 {@link Feedback} 엔티티를 생성·저장합니다.
+     *
+     * @param request 저장에 필요한 최소 정보가 담긴 요청 DTO
+     * @param session 연관될 대화 세션 엔티티
+     * @return 저장된 {@link Feedback} 엔티티
+     */
     private Feedback createFeedbackFromRequest(FeedbackCreateRequest request, DialogueSession session) {
         Feedback feedback = Feedback.builder()
                 .dialogueSession(session)
@@ -268,6 +330,11 @@ public class FeedbackService {
         return feedbackRepository.save(feedback);
     }
 
+    /**
+     * 데이터가 없을 때 사용할 기본 통계 응답을 생성합니다.
+     *
+     * @return 모든 수치가 0으로 초기화된 통계 응답
+     */
     private FeedbackStatsResponse createEmptyStats() {
         return FeedbackStatsResponse.of(
                 0L, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0L, 0L, 0L, 0L,
@@ -277,6 +344,12 @@ public class FeedbackService {
         );
     }
 
+    /**
+     * 등급 분포를 계산합니다.
+     *
+     * @param feedbacks 대상 피드백 목록
+     * @return A·B·C·D·F의 개수로 구성된 분포 객체
+     */
     private FeedbackStatsResponse.GradeDistribution calculateGradeDistribution(List<Feedback> feedbacks) {
         long gradeA = feedbacks.stream().filter(f -> f.getTotalScore() >= 90).count();
         long gradeB = feedbacks.stream().filter(f -> f.getTotalScore() >= 80 && f.getTotalScore() < 90).count();
@@ -293,6 +366,12 @@ public class FeedbackService {
                 .build();
     }
 
+    /**
+     * 최근 6개월의 월별 평균 점수와 건수를 계산합니다.
+     *
+     * @param feedbacks 대상 피드백 목록
+     * @return 최근 6개월의 {@code yearMonth}, {@code averageScore}, {@code count} 목록
+     */
     private List<FeedbackStatsResponse.MonthlyScore> calculateMonthlyScores(List<Feedback> feedbacks) {
         // 최근 6개월 월별 통계 계산
         List<FeedbackStatsResponse.MonthlyScore> monthlyScores = new ArrayList<>();

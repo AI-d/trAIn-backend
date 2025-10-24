@@ -21,11 +21,21 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * 전체 대화 분석 + 개별 문장 피드백 서비스
- * <p>
- * 1. 전체 대화 흐름 분석
- * 2. 문장별 세부 피드백
- * 3. 대화 전체 개선안
+ * 전체 대화(세션) 기반의 AI 피드백 생성을 담당하는 서비스입니다.
+ *
+ * <p>핵심 기능</p>
+ * <ul>
+ *   <li><b>종합 프롬프트 생성</b>: 전체 대화 흐름과 사용자 발화를 정리하여 AI 모델에 전달할 입력을 구성함</li>
+ *   <li><b>AI 호출 및 재시도</b>: 일시 오류 대비 최대 3회까지 지수형(1→2→3초) 대기 후 재시도함</li>
+ *   <li><b>응답 파싱</b>: 점수/개선안/전체·문장별 분석 결과를 DTO/Response로 변환함</li>
+ * </ul>
+ *
+ * <p>설계 원칙</p>
+ * <ul>
+ *   <li>도메인 호환성 유지(기존 생성 방식과의 병행 지원)</li>
+ *   <li>로깅 일관성(세션 ID 중심 추적)</li>
+ *   <li>예외 전파 시 도메인 표준 예외(TrainException)로 감싸서 의미 전달</li>
+ * </ul>
  *
  * @author 왕택준
  * @since 1.0.0
@@ -43,66 +53,9 @@ public class FeedbackPromptService {
     private static final int BASE_DELAY_MS = 1000; // 1초 기본 지연
 
     /**
-     * AI를 통해 대화 세션의 피드백을 생성합니다.
-     * 실패 시 최대 3회까지 재시도합니다.
+     * 재시도 전 대기 시간(선형 백오프)을 적용합니다.
      *
-     * @param dialogueSession 분석할 대화 세션
-     * @return 생성된 피드백 요청 객체
-     * @throws TrainException AI 분석 실패 시 발생 (모든 재시도 실패 후)
-     */
-    public FeedbackCreateRequest generateFeedbackFromAI(DialogueSession dialogueSession) {
-        log.info("AI 피드백 생성 시작 - sessionId: {}", dialogueSession.getSessionId());
-
-        Exception lastException = null;
-
-        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            try {
-                log.info("AI 피드백 생성 시도 {}/{} - sessionId: {}",
-                        attempt, MAX_RETRIES, dialogueSession.getSessionId());
-
-                // 1. 전체 대화 + 개별 문장 분석 프롬프트 생성
-                String comprehensivePrompt = generateComprehensivePrompt(dialogueSession);
-
-                // 2. AI API 호출
-                String aiResponse = callChatGPT(comprehensivePrompt);
-
-                // 3. AI 응답 파싱 (기존 호환성 유지)
-                FeedbackCreateRequest feedbackRequest = parseAIResponse(
-                        aiResponse, dialogueSession.getSessionId(), comprehensivePrompt, aiResponse);
-
-                log.info("AI 피드백 생성 성공 - sessionId: {}, attempt: {}, totalScore: {}",
-                        dialogueSession.getSessionId(), attempt, feedbackRequest.totalScore());
-
-                return feedbackRequest;
-
-            } catch (Exception e) {
-                lastException = e;
-
-                // 시도별로 다른 로그 레벨
-                if (attempt < MAX_RETRIES) {
-                    log.warn("AI 피드백 생성 실패, 재시도 예정 - sessionId: {}, attempt: {}/{}, error: {}",
-                            dialogueSession.getSessionId(), attempt, MAX_RETRIES, e.getMessage());
-
-                    // 백오프 전략: 1초, 2초, 3초 대기
-                    waitBeforeRetry(attempt);
-                } else {
-                    log.error("AI 피드백 생성 최종 실패 - sessionId: {}, attempt: {}/{}, error: {}",
-                            dialogueSession.getSessionId(), attempt, MAX_RETRIES, e.getMessage());
-                }
-            }
-        }
-
-        // 모든 재시도 실패
-        log.error("AI 피드백 생성 완전 실패 - sessionId: {}, 총 {}회 시도 완료",
-                dialogueSession.getSessionId(), MAX_RETRIES);
-
-        throw new TrainException(ErrorCode.AI_ANALYSIS_FAILED,
-                String.format("AI 피드백 생성에 %d회 시도했지만 모두 실패했습니다. 마지막 오류: %s",
-                        MAX_RETRIES, lastException != null ? lastException.getMessage() : "알 수 없는 오류"));
-    }
-
-    /**
-     * 재시도 전 대기 (백오프 전략)
+     * @param attempt 현재 재시도 횟수(1부터 시작)
      */
     private void waitBeforeRetry(int attempt) {
         try {
@@ -116,10 +69,15 @@ public class FeedbackPromptService {
     }
 
     /**
-     * 종합 분석이 포함된 완전한 피드백 응답 생성
-     * TJ님이 원하는 진짜 기능 (재시도 로직 포함)
+     * 종합 분석(전체 흐름 + 문장별 분석 + 개선안)이 포함된 응답을 생성합니다.
+     *
+     * <p>본 메서드는 UI에 즉시 제공 가능한 형태의 {@link FeedbackResponse}를 구성합니다.</p>
+     *
+     * @param dialogueSession 분석 대상 세션
+     * @return 종합 분석이 포함된 피드백 응답
+     * @throws TrainException AI 분석 실패 시(모든 재시도 실패 후) 발생
      */
-    public FeedbackResponse generateComprehensiveFeedback(DialogueSession dialogueSession) {
+    public FeedbackResponse generateFeedbackFromAI(DialogueSession dialogueSession) {
         log.info("종합 피드백 응답 생성 시작 - sessionId: {}", dialogueSession.getSessionId());
 
         Exception lastException = null;
@@ -130,7 +88,7 @@ public class FeedbackPromptService {
                         attempt, MAX_RETRIES, dialogueSession.getSessionId());
 
                 // 1. 전체 대화 + 개별 문장 분석 프롬프트 생성
-                String comprehensivePrompt = generateComprehensivePrompt(dialogueSession);
+                String comprehensivePrompt = generatePrompt(dialogueSession);
 
                 // 2. AI API 호출
                 String aiResponse = callChatGPT(comprehensivePrompt);
@@ -168,9 +126,20 @@ public class FeedbackPromptService {
     }
 
     /**
-     * 전체 대화 흐름 + 개별 문장 분석을 위한 종합 프롬프트 생성
+     * 전체 대화 흐름과 사용자 발화를 종합하여 AI 모델 입력 프롬프트를 생성합니다.
+     *
+     * <p>프롬프트 구성</p>
+     * <ul>
+     *   <li>전체 대화 로그(화자 레이블 포함)</li>
+     *   <li>사용자 발화만 별도 목록화(문장 번호 부여)</li>
+     *   <li>대표 발화(가장 긴 문장) 기반의 개선안 유도</li>
+     * </ul>
+     *
+     * @param dialogueSession 분석 대상 세션
+     * @return AI 모델 입력용 종합 프롬프트 문자열
+     * @throws TrainException 대화 내용 부족 시 발생(INSUFFICIENT_DIALOGUE_CONTENT)
      */
-    private String generateComprehensivePrompt(DialogueSession dialogueSession) {
+    private String generatePrompt(DialogueSession dialogueSession) {
         List<Transcript> transcripts = dialogueSession.getTranscripts();
 
         log.info("종합 프롬프트 생성 - sessionId: {}, transcriptCount: {}",
@@ -307,7 +276,12 @@ public class FeedbackPromptService {
     }
 
     /**
-     * 종합 분석 응답 파싱 (새로운 기능)
+     * 종합 분석 응답을 파싱하여 {@link FeedbackResponse}로 변환합니다.
+     *
+     * @param aiResponse      AI 원본 응답 문자열
+     * @param dialogueSession 파싱 컨텍스트가 되는 세션
+     * @return 종합 분석이 포함된 {@link FeedbackResponse}
+     * @throws TrainException JSON 블록 추출 실패 또는 필드 파싱 실패 시 발생
      */
     private FeedbackResponse parseComprehensiveResponse(String aiResponse, DialogueSession dialogueSession) {
         log.info("종합 분석 응답 파싱 시작 - sessionId: {}", dialogueSession.getSessionId());
@@ -372,7 +346,10 @@ public class FeedbackPromptService {
     }
 
     /**
-     * 전체 대화 분석 파싱
+     * 전체 대화 분석 노드를 파싱하여 {@link FeedbackResponse.OverallAnalysis}로 변환합니다.
+     *
+     * @param overallNode 전체 대화 분석 JSON 노드
+     * @return 파싱된 전체 대화 분석(파싱 실패 또는 누락 시 {@code null})
      */
     private FeedbackResponse.OverallAnalysis parseOverallAnalysis(JsonNode overallNode) {
         if (overallNode == null || overallNode.isNull()) return null;
@@ -403,7 +380,10 @@ public class FeedbackPromptService {
     }
 
     /**
-     * 문장별 분석 파싱
+     * 문장별 분석 목록을 파싱하여 {@code List<SentenceAnalysis>}로 변환합니다.
+     *
+     * @param sentencesNode 문장별 분석 JSON 배열 노드
+     * @return 파싱된 문장별 분석 목록(파싱 실패 시 수집된 항목만 반환)
      */
     private List<FeedbackResponse.SentenceAnalysis> parseSentenceAnalyses(JsonNode sentencesNode) {
         List<FeedbackResponse.SentenceAnalysis> analyses = new ArrayList<>();
@@ -440,7 +420,10 @@ public class FeedbackPromptService {
     }
 
     /**
-     * 대화 개선안 파싱
+     * 대화 전체 개선안 노드를 파싱하여 {@link FeedbackResponse.ConversationImprovement}로 변환합니다.
+     *
+     * @param improvementNode 대화 개선안 JSON 노드
+     * @return 파싱된 대화 개선안(파싱 실패 또는 누락 시 {@code null})
      */
     private FeedbackResponse.ConversationImprovement parseConversationImprovement(JsonNode improvementNode) {
         if (improvementNode == null || improvementNode.isNull()) return null;
@@ -458,7 +441,10 @@ public class FeedbackPromptService {
     }
 
     /**
-     * 점수에 따른 등급 계산
+     * 총점 구간에 따른 등급을 계산합니다.
+     *
+     * @param score 총점(0~100)
+     * @return 등급 문자열(A/B/C/D/F)
      */
     private String calculateGrade(int score) {
         if (score >= 90) return "A";
@@ -468,10 +454,13 @@ public class FeedbackPromptService {
         return "F";
     }
 
-    // ========================================
-    // 기존 메서드들 (호환성 유지)
-    // ========================================
-
+    /**
+     * AI 모델(ChatGPT)에 프롬프트를 전달하여 응답을 수신합니다.
+     *
+     * @param prompt 모델 입력 프롬프트
+     * @return 모델 원문 응답 콘텐츠
+     * @throws Exception 모델 호출 실패 시 발생
+     */
     private String callChatGPT(String prompt) throws Exception {
         log.info("ChatGPT 4.0 호출 시작 - prompt length: {}", prompt.length());
 
@@ -490,6 +479,16 @@ public class FeedbackPromptService {
         }
     }
 
+    /**
+     * AI 응답(JSON)을 파싱하여 저장용 {@link FeedbackCreateRequest}로 변환합니다.
+     *
+     * @param aiResponse    AI 원본 응답
+     * @param sessionId     세션 ID(트래킹 용도)
+     * @param aiPrompt      사용된 프롬프트(디버깅/감사 로그용)
+     * @param aiRawResponse 원본 응답(디버깅/감사 로그용)
+     * @return 저장용 피드백 생성 요청 DTO
+     * @throws TrainException JSON 블록 추출 실패 또는 필드 파싱 실패 시 발생
+     */
     private FeedbackCreateRequest parseAIResponse(String aiResponse, String sessionId,
                                                   String aiPrompt, String aiRawResponse) {
         log.info("AI 응답 파싱 시작 - sessionId: {}", sessionId);
@@ -530,6 +529,19 @@ public class FeedbackPromptService {
         }
     }
 
+    /**
+     * 모델 응답 문자열에서 JSON 본문을 추출합니다.
+     *
+     * <p>우선순위</p>
+     * <ol>
+     *   <li>코드펜스 블록(```json ... ```)</li>
+     *   <li>최초 '{'부터 최후 '}'까지의 서브스트링</li>
+     * </ol>
+     *
+     * @param response 모델 원문 응답
+     * @return 추출된 JSON 문자열
+     * @throws TrainException JSON 경계를 찾을 수 없는 경우 발생
+     */
     private String extractJsonFromResponse(String response) {
         // ```json 블록에서 JSON 추출
         int jsonStart = response.indexOf("```json");

@@ -11,15 +11,22 @@ import java.time.LocalDateTime;
 
 /**
  * 피드백 엔티티
- *
+ * <p>
  * 대화 세션이 완료된 후 AI가 생성한 피드백과 개선안을 저장합니다.
  * DialogueSession과 1:1 관계를 가지며, 하나의 세션에는 하나의 피드백만 존재합니다.
- *
+ * <p>
  * 주요 기능:
  * - AI 분석 결과 저장 (점수, 개선점)
  * - 3가지 스타일의 개선안 저장 (간결/공손/따뜻)
  * - 사용자가 선택/수정한 최종안 저장
  * - 피드백 생성 및 수정 이력 관리
+ * <p>
+ * 점수 체계 (균등 배분):
+ * - 발화속도: 0-25점
+ * - 추임새: 0-25점
+ * - 공손도: 0-25점
+ * - 명료성: 0-25점
+ * - 총합: 0-100점
  *
  * @author 왕택준
  * @since 1.0.0
@@ -55,13 +62,13 @@ public class Feedback {
     private Integer totalScore;
 
     /**
-     * 발화 속도 점수 (0-30)
+     * 발화 속도 점수 (0-25) - 균등 배분으로 수정
      */
     @Column(name = "speech_rate_score", nullable = false)
     private Integer speechRateScore;
 
     /**
-     * 추임새 점수 (0-20)
+     * 추임새 점수 (0-25) - 균등 배분으로 수정
      * "음...", "그..." 등의 불필요한 표현 빈도 평가
      */
     @Column(name = "filler_words_score", nullable = false)
@@ -168,6 +175,10 @@ public class Feedback {
         }
     }
 
+    /**
+     * Feedback 엔티티 빌더 생성자.
+     * 필수 필드를 초기화합니다.
+     */
     @Builder
     public Feedback(DialogueSession dialogueSession, Integer totalScore,
                     Integer speechRateScore, Integer fillerWordsScore,
@@ -175,6 +186,7 @@ public class Feedback {
                     String improvementPoints, String originalTranscript,
                     String alternativeA, String alternativeB, String alternativeC,
                     String aiPrompt, String aiRawResponse) {
+        // 필수 값 검증은 @NotNull, @Column(nullable=false) 및 validateScores()에서 처리
         this.dialogueSession = dialogueSession;
         this.totalScore = totalScore;
         this.speechRateScore = speechRateScore;
@@ -191,11 +203,16 @@ public class Feedback {
     }
 
     /**
-     * 사용자가 개선안을 선택합니다.
+     * 사용자가 AI 제안 개선안(A, B, C)을 선택합니다.
+     * <p>
+     * 선택된 타입({@code chosenAlternative})을 설정하고,
+     * 해당 개선안 내용을 {@code finalChoice}에 복사합니다.
+     * </p>
      *
-     * @param alternative 선택된 개선안 타입 (A, B, C)
+     * @param alternative 선택된 개선안 타입 (A, B, C 중 하나)
+     * @throws IllegalArgumentException CUSTOM 또는 유효하지 않은 타입 선택 시
      */
-    public void choosealternative(ChosenAlternative alternative) {
+    public void chooseAlternative(ChosenAlternative alternative) {
         this.chosenAlternative = alternative;
 
         switch (alternative) {
@@ -207,40 +224,66 @@ public class Feedback {
     }
 
     /**
-     * 사용자가 개선안을 직접 수정합니다.
+     * 사용자가 개선안을 직접 수정/작성합니다.
+     * <p>
+     * {@code chosenAlternative}를 {@link ChosenAlternative#CUSTOM}으로 설정하고,
+     * 입력된 텍스트(앞뒤 공백 제거)를 {@code finalChoice}에 저장합니다.
+     * </p>
      *
-     * @param customText 사용자가 직접 작성한 개선안
+     * @param customText 사용자 정의 개선안 (null 또는 공백 불가)
+     * @throws IllegalArgumentException customText가 비어있거나 null인 경우
      */
     public void setCustomChoice(String customText) {
+        if (customText == null || customText.trim().isEmpty()) {
+            throw new IllegalArgumentException("사용자 정의 개선안은 내용이 필요합니다.");
+        }
         this.chosenAlternative = ChosenAlternative.CUSTOM;
-        this.finalChoice = customText;
+        this.finalChoice = customText.trim();
     }
 
     /**
-     * 점수 검증 (0-100 범위)
+     * 엔티티 저장/업데이트 전 점수 유효성 검증
+     * <p>
+     * 각 점수 범위(0-25) 및 총점 범위(0-100)를 확인합니다.
+     * 세부 점수 합계와 총점이 정확히 일치하는지 검증합니다.
+     * </p>
+     *
+     * @throws IllegalArgumentException 점수 범위 또는 합계 불일치 시
      */
     @PrePersist
     @PreUpdate
     private void validateScores() {
-        if (totalScore < 0 || totalScore > 100) {
-            throw new IllegalArgumentException("전체 점수는 0-100 사이여야 합니다: " + totalScore);
+        // 각 점수 범위 검증 (0-25)
+        if (speechRateScore == null || speechRateScore < 0 || speechRateScore > 25) {
+            throw new IllegalArgumentException("발화속도 점수 범위 오류: " + speechRateScore);
         }
-        if (speechRateScore < 0 || speechRateScore > 30) {
-            throw new IllegalArgumentException("발화속도 점수는 0-30 사이여야 합니다: " + speechRateScore);
+        if (fillerWordsScore == null || fillerWordsScore < 0 || fillerWordsScore > 25) {
+            throw new IllegalArgumentException("추임새 점수 범위 오류: " + fillerWordsScore);
         }
-        if (fillerWordsScore < 0 || fillerWordsScore > 20) {
-            throw new IllegalArgumentException("추임새 점수는 0-20 사이여야 합니다: " + fillerWordsScore);
+        if (politenessScore == null || politenessScore < 0 || politenessScore > 25) {
+            throw new IllegalArgumentException("공손도 점수 범위 오류: " + politenessScore);
         }
-        if (politenessScore < 0 || politenessScore > 25) {
-            throw new IllegalArgumentException("공손도 점수는 0-25 사이여야 합니다: " + politenessScore);
+        if (clarityScore == null || clarityScore < 0 || clarityScore > 25) {
+            throw new IllegalArgumentException("명료성 점수 범위 오류: " + clarityScore);
         }
-        if (clarityScore < 0 || clarityScore > 25) {
-            throw new IllegalArgumentException("명료성 점수는 0-25 사이여야 합니다: " + clarityScore);
+
+        // 총점 범위 검증 (0-100)
+        if (totalScore == null || totalScore < 0 || totalScore > 100) {
+            throw new IllegalArgumentException("전체 점수 범위 오류: " + totalScore);
+        }
+
+        // 점수 합계 검증
+        int calculatedTotal = speechRateScore + fillerWordsScore + politenessScore + clarityScore;
+
+        if (totalScore != calculatedTotal) {
+            throw new IllegalArgumentException(
+                    String.format("점수 합계 불일치: Total=%d, Calculated=%d (정확히 일치해야 함)",
+                            totalScore, calculatedTotal));
         }
     }
 
     /**
-     * 최종 선택 여부 확인
+     * 사용자가 개선안 선택을 완료했는지 확인합니다.
      *
      * @return 사용자가 최종 선택을 완료했으면 true
      */
@@ -249,7 +292,7 @@ public class Feedback {
     }
 
     /**
-     * 점수별 등급 반환
+     * 총점을 기준으로 A-F 등급을 반환합니다.
      *
      * @return 점수에 따른 등급 (A, B, C, D, F)
      */
