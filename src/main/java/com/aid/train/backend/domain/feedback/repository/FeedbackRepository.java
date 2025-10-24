@@ -3,6 +3,7 @@ package com.aid.train.backend.domain.feedback.repository;
 import com.aid.train.backend.domain.feedback.entity.Feedback;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -64,10 +65,8 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
      * @param pageable 페이징 정보
      * @return 페이징된 피드백 목록
      */
-    @Query("SELECT f FROM Feedback f " +
-            "JOIN FETCH f.dialogueSession s " +
-            "JOIN FETCH s.scenario sc " +
-            "WHERE s.user.id = :userId")
+    @EntityGraph(attributePaths = {"dialogueSession", "dialogueSession.scenario"})
+    @Query("SELECT f FROM Feedback f WHERE f.dialogueSession.user.id = :userId")
     Page<Feedback> findByUserId(@Param("userId") Long userId, Pageable pageable);
 
     /**
@@ -163,17 +162,17 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
      * 최근 N개의 피드백을 조회합니다.
      * 최근 학습 현황 표시용
      *
-     * @param userId 사용자 ID
-     * @param limit  조회할 개수
+     * @param userId   사용자 ID
+     * @param pageable 조회할 개수
      * @return 최근 피드백 목록
      */
     @Query("SELECT f FROM Feedback f " +
             "JOIN FETCH f.dialogueSession s " +
             "JOIN FETCH s.scenario sc " +
             "WHERE s.user.id = :userId " +
-            "ORDER BY f.createdAt DESC ")
+            "ORDER BY f.createdAt DESC")
     List<Feedback> findRecentFeedbacksByUserId(@Param("userId") Long userId,
-                                               @Param("limit") int limit);
+                                               Pageable pageable);
 
     /**
      * 특정 점수 이상의 피드백을 조회합니다.

@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -250,6 +251,7 @@ public class FeedbackService {
 
         Double averageScore = feedbackRepository.findAverageScoreByUserId(userId);
         Object[] detailedAverages = feedbackRepository.findDetailedScoreAveragesByUserId(userId);
+        log.info("detailedAverages: {}", Arrays.toString(detailedAverages));
 
         // 최근 통계
         LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
@@ -284,10 +286,10 @@ public class FeedbackService {
         return FeedbackStatsResponse.of(
                 totalCount,
                 averageScore != null ? Math.round(averageScore * 10.0) / 10.0 : 0.0,
-                detailedAverages[0] != null ? Math.round(((Number) detailedAverages[0]).doubleValue() * 10.0) / 10.0 : 0.0,
-                detailedAverages[1] != null ? Math.round(((Number) detailedAverages[1]).doubleValue() * 10.0) / 10.0 : 0.0,
-                detailedAverages[2] != null ? Math.round(((Number) detailedAverages[2]).doubleValue() * 10.0) / 10.0 : 0.0,
-                detailedAverages[3] != null ? Math.round(((Number) detailedAverages[3]).doubleValue() * 10.0) / 10.0 : 0.0,
+                extractScoreAverage(detailedAverages, 0),
+                extractScoreAverage(detailedAverages, 1),
+                extractScoreAverage(detailedAverages, 2),
+                extractScoreAverage(detailedAverages, 3),
                 maxScore,
                 minScore,
                 (long) recentWeekFeedbacks.size(),
@@ -297,6 +299,25 @@ public class FeedbackService {
                 gradeDistribution,
                 monthlyScores
         );
+    }
+
+    /**
+     * Object 배열에서 안전하게 점수 평균을 추출합니다.
+     *
+     * @param detailedAverages 점수 평균 배열
+     * @param index            추출할 인덱스
+     * @return 추출된 점수 (실패 시 0.0)
+     */
+    private Double extractScoreAverage(Object[] detailedAverages, int index) {
+        if (detailedAverages == null || detailedAverages.length <= index || detailedAverages[index] == null) {
+            return 0.0;
+        }
+        try {
+            return Math.round(((Number) detailedAverages[index]).doubleValue() * 10.0) / 10.0;
+        } catch (ClassCastException e) {
+            log.warn("점수 변환 실패 - index: {}, value: {}", index, detailedAverages[index]);
+            return 0.0;
+        }
     }
 
     // ========================================
