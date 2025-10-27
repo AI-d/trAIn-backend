@@ -157,7 +157,7 @@ public class SessionCoordinator {
             gptSessionManager.registerGptSession(sessionId, initialGptSession);
 
             // 4. GPT Realtime API 연결
-            gptSessionManager.createGptSession(
+            /*gptSessionManager.createGptSession(
                     sessionId,
                     message,
                     this::handleGptResponse
@@ -171,7 +171,7 @@ public class SessionCoordinator {
                     gSession.setReady(true);
 
                     // 대기 중이던 오디오 큐 전송
-                    /*Queue<byte[]> queue = gSession.getAudioQueue();
+                    *//*Queue<byte[]> queue = gSession.getAudioQueue();
                     if(queue.size() > 0) {
                         log.info("대기 중이던 오디오 청크 전송 시작 - count: {}", queue.size());
                         while (!queue.isEmpty()) {
@@ -179,14 +179,14 @@ public class SessionCoordinator {
                             gptSessionManager.sendAudioToGpt(sessionId, chunk);
                         }
                         log.info("대기 중이던 오디오 청크 전송 완료");
-                    }*/
+                    }*//*
                 }
             })
             .exceptionally(ex -> {
                log.error("GPT 세션 생성 실패", ex);
                 terminateSession(sessionId);
                return null;
-            });
+            });*/
 
 
             // 5. WebRTC 상태 초기화
@@ -217,7 +217,7 @@ public class SessionCoordinator {
      * @param sessionId 대화 세션 ID
      * @param audioData 음성 데이터 (바이너리)
      */
-    public void routeAudioToGpt(String sessionId, byte[] audioData) {
+    /*public void routeAudioToGpt(String sessionId, byte[] audioData) {
         try {
             // 1. WebRTC 연결 확인
             if (!webRtcStateManager.isConnected(sessionId)) {
@@ -260,7 +260,7 @@ public class SessionCoordinator {
         } catch (Exception e) {
             log.error("음성 라우팅 실패 - sessionId: {}", sessionId, e);
         }
-    }
+    }*/
 
     /**
      * GPT 응답을 사용자에게 라우팅합니다.
@@ -279,7 +279,7 @@ public class SessionCoordinator {
      * @param sessionId 대화 세션 ID
      * @param jsonResponse GPT 응답 JSON
      */
-    private void handleGptResponse(String sessionId, String jsonResponse) {
+    /*private void handleGptResponse(String sessionId, String jsonResponse) {
         try {
 
             log.debug("GPT 응답 수신 - sessionId: {}, message length: {}", sessionId, jsonResponse.length());
@@ -409,7 +409,7 @@ public class SessionCoordinator {
         } catch (Exception e) {
             log.error("GPT 응답 처리 실패 - sessionId: {}", sessionId, e);
         }
-    }
+    }*/
 
     /**
      * AI 음성을 사용자에게 전송합니다.
@@ -417,7 +417,7 @@ public class SessionCoordinator {
      * @param sessionId 대화 세션 ID
      * @param audioData 음성 데이터
      */
-    private void routeAudioToUser(String sessionId, byte[] audioData) {
+    /*private void routeAudioToUser(String sessionId, byte[] audioData) {
         try {
             // 1. WebSocket 세션 조회
             WebSocketSession wsSession = wsSessionManager.getSession(sessionId);
@@ -439,7 +439,7 @@ public class SessionCoordinator {
         } catch (Exception e) {
             log.error("AI 음성 전송 실패 - sessionId: {}", sessionId, e);
         }
-    }
+    }*/
 
     /**
      * 큰 오디오 델타를 청크로 나눠서 전송합니다.
@@ -516,12 +516,12 @@ public class SessionCoordinator {
             log.info("세션 종료 시작 - sessionId: {}", sessionId);
 
             // 1. GPT 세션 종료
-            if (gptSessionManager.hasGptSession(sessionId)) {
+            /*if (gptSessionManager.hasGptSession(sessionId)) {
                 gptSessionManager.closeGptSession(sessionId);
-            }
+            }*/
 
             // 2. WebRTC 상태 제거
-            webRtcStateManager.removeState(sessionId);
+            // webRtcStateManager.removeState(sessionId);
 
             // 3. DB 매핑 제거
             dialogueSessionMapper.unmapSession(sessionId);
@@ -530,9 +530,9 @@ public class SessionCoordinator {
             wsSessionManager.removeSession(sessionId);
 
             // 5. 텍스트 버퍼 정리
-            userTranscriptBuffer.remove(sessionId);
+            /*userTranscriptBuffer.remove(sessionId);
             aiTranscriptBuffer.remove(sessionId);
-            gptResponseInProgress.remove(sessionId);
+            gptResponseInProgress.remove(sessionId);*/
 
             log.info("세션 종료 완료 - sessionId: {}", sessionId);
 
@@ -590,7 +590,7 @@ public class SessionCoordinator {
         log.debug("오디오 큐에 저장 - sessionId: {}, 큐 크기: {}", sessionId, gptSession.getAudioQueue().size());*/
     }
 
-    public void requestInitialGptResponse(String sessionId) {
+    /*public void requestInitialGptResponse(String sessionId) {
         try {
             GptSession gptSession = gptSessionManager.getGptSession(sessionId);
             if(gptSession == null) {
@@ -616,12 +616,12 @@ public class SessionCoordinator {
         }
     }
 
-    /**
+    *//**
      * Manual 모드에서 사용자 음성 입력 완료 처리
      *
      * 1. input_audio_buffer.commit: 지금까지 받은 음성을 하나의 턴으로 확정
      * 2. response.create: GPT에게 응답 생성 요청
-     */
+     *//*
     public void commitAndRequestResponse(String sessionId) {
         try {
             GptSession gptSession = gptSessionManager.getGptSession(sessionId);
@@ -654,6 +654,6 @@ public class SessionCoordinator {
         } catch(Exception e) {
             log.error("commit 및 응답 요청 실패 - sessionId: {}", sessionId, e);
         }
-    }
+    }*/
 
 }

@@ -1,3 +1,4 @@
+/*
 package com.aid.train.backend.websocket.handler;
 
 import com.aid.train.backend.domain.session.service.TranscriptService;
@@ -17,6 +18,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
+*/
 /**
  * 음성 데이터 송수신을 담당하는 WebSocket 핸들러
  *
@@ -38,7 +40,8 @@ import org.springframework.web.socket.handler.BinaryWebSocketHandler;
  * @author 김경민
  * @since 2025-10-15
  * @version 1.0.0
- */
+ *//*
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -75,7 +78,8 @@ public class AudioHandler extends AbstractWebSocketHandler {
 
 
     }
-        /**
+        */
+/**
          * WebSocket 연결이 성공했을 때 호출됩니다.
          *
          * 처리 내용:
@@ -87,7 +91,8 @@ public class AudioHandler extends AbstractWebSocketHandler {
          *    - WebRTC 상태 초기화
          *
          * @param session WebSocket 연결 객체
-         */
+         *//*
+
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String sessionId = extractSessionId(session);
@@ -107,7 +112,8 @@ public class AudioHandler extends AbstractWebSocketHandler {
         }
     }
 
-    /**
+    */
+/**
      * 바이너리 메시지(음성 데이터)를 수신했을 때 호출됩니다.
      *
      * 처리 내용:
@@ -121,7 +127,8 @@ public class AudioHandler extends AbstractWebSocketHandler {
      *
      * @param session WebSocket 연결 객체
      * @param message 바이너리 메시지 (음성 데이터)
-     */
+     *//*
+
     @Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
         String sessionId = extractSessionId(session);
@@ -131,7 +138,8 @@ public class AudioHandler extends AbstractWebSocketHandler {
         sessionCoordinator.routeAudioToGpt(sessionId, audioData);
 
 
-        /*try {
+        */
+/*try {
 
             // WebRTC 확인
             if (!webRtcStateManager.isConnected(sessionId)) {
@@ -156,10 +164,12 @@ public class AudioHandler extends AbstractWebSocketHandler {
 
         } catch (Exception e) {
             log.error("오디오 처리 실패 - sessionId: {}", sessionId, e);
-        }*/
+        }*//*
+
     }
 
-    /**
+    */
+/**
      * WebSocket 연결이 종료되었을 때 호출됩니다.
      *
      * 처리 내용:
@@ -171,7 +181,8 @@ public class AudioHandler extends AbstractWebSocketHandler {
      *
      * @param session WebSocket 연결 객체
      * @param status 종료 상태
-     */
+     *//*
+
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String sessionId = extractSessionId(session);
@@ -190,12 +201,14 @@ public class AudioHandler extends AbstractWebSocketHandler {
         }
     }
 
-    /**
+    */
+/**
      * WebSocket 전송 에러 발생 시 호출됩니다.
      *
      * @param session WebSocket 연결 객체
      * @param exception 발생한 예외
-     */
+     *//*
+
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
         String sessionId = extractSessionId(session);
@@ -211,7 +224,8 @@ public class AudioHandler extends AbstractWebSocketHandler {
         }
     }
 
-    /**
+    */
+/**
      * WebSocket URI에서 sessionId를 추출합니다.
      *
      * URI 형식: /ws/audio/{sessionId}
@@ -219,10 +233,11 @@ public class AudioHandler extends AbstractWebSocketHandler {
      *
      * @param session WebSocket 연결 객체
      * @return sessionId
-     */
+     *//*
+
     private String extractSessionId(WebSocketSession session) {
         String path = session.getUri().getPath();
         String[] parts = path.split("/");
         return parts[parts.length - 1];
     }
-}
+}*/
