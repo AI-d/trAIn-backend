@@ -76,17 +76,22 @@ public class RealtimeSessionController {
         headers.setBearerAuth(openAiApiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
+        log.info("🔧 STT 설정 - model: {}, language: {}", req.sttModel(), req.language());
         Map<String, Object> request = new HashMap<>();
         request.put("model", req.model());
         request.put("voice", req.voice());
         request.put("instructions", instructions);
         request.put("turn_detection", null);  // null 가능
-        request.put("input_audio_transcription", Map.of("model", req.sttModel()));
+        request.put("input_audio_transcription", Map.of(
+                "model", req.sttModel(),
+                "language", req.language()
+        ));
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
         ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
         log.info("임시 세션 생성 성공: {}", response.getBody());
+        log.info("OpenAI 응답 전체: {}", response.getBody());
 
         return ResponseEntity.ok().body(ApiResponse.success("webRtc 연결을 위한 키 발급에 성공했습니다.", response.getBody()));
     }

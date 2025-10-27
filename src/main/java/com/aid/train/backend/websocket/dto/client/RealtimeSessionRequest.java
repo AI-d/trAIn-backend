@@ -5,6 +5,7 @@ public record RealtimeSessionRequest (
         String model,
         String voice,
         String instructions,
-        String sttModel
+        String sttModel,
+        String language
 ) {
 }

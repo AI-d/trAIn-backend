@@ -57,11 +57,13 @@ public class TranscriptHandler extends TextWebSocketHandler {
             if("TRANSCRIPT".equals(type)) {
                 String speaker = json.get("speaker").asText().toUpperCase();
                 String content = json.get("text").asText();
+                long startMs = json.has("startTimeMs")? json.get("startTimeMs").asLong() : 0L;
+                long endMs = json.has("endTimeMs")? json.get("endTimeMs").asLong() : 0L;;
 
                 if("USER".equals(speaker)) {
-                    transcriptService.saveUserTranscript(sessionId, content);
+                    transcriptService.saveUserTranscript(sessionId, content, startMs, endMs);
                 } else if("AI".equals(speaker)) {
-                    transcriptService.saveAiTranscript(sessionId, content);
+                    transcriptService.saveAiTranscript(sessionId, content, startMs, endMs);
                 }
 
                 log.info("transcript 저장 - sessionId: {}, speaker: {}, content: {}", sessionId, speaker, content);
