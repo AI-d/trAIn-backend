@@ -29,8 +29,8 @@ public class GptSession {
     @Builder.Default
     private List<String> conversationHistory = new ArrayList<>();
 
-    @Builder.Default
-    private Queue<byte[]> audioQueue = new LinkedList<>();
+    /*@Builder.Default
+    private Queue<byte[]> audioQueue = new LinkedList<>();*/
 
     public void setReady(boolean ready) {
         this.isReady.set(ready);

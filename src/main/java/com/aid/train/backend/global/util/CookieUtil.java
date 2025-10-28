@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -35,14 +36,7 @@ public class CookieUtil {
      * @param refreshToken 저장할 Refresh Token
      */
     public void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
-        ResponseCookie cookie = ResponseCookie.from(cookieProperties.getRefreshTokenName(), refreshToken)
-                .httpOnly(cookieProperties.isHttpOnly())
-                .secure(cookieProperties.isSecure())
-                .path(cookieProperties.getPath())
-                .maxAge(cookieProperties.getRefreshTokenMaxAge())
-                .sameSite(cookieProperties.getSameSite())
-                .domain(cookieProperties.getDomain())
-                .build();
+        ResponseCookie cookie = buildRefreshCookie(refreshToken, cookieProperties.getRefreshTokenMaxAge());
         response.addHeader("Set-Cookie", cookie.toString());
     }
 
@@ -70,14 +64,26 @@ public class CookieUtil {
      * @param response HttpServletResponse 객체
      */
     public void deleteRefreshTokenCookie(HttpServletResponse response) {
-        ResponseCookie cookie = ResponseCookie.from(cookieProperties.getRefreshTokenName(), "")
+        ResponseCookie cookie = buildRefreshCookie("", 0); // 즉시 만료
+        response.addHeader("Set-Cookie", cookie.toString());
+    }
+
+    /**
+     * 공통 쿠키 빌더(도메인 조건부 적용)
+     */
+    private ResponseCookie buildRefreshCookie(String value, long maxAge) {
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie
+                .from(cookieProperties.getRefreshTokenName(), value)
                 .httpOnly(cookieProperties.isHttpOnly())
                 .secure(cookieProperties.isSecure())
                 .path(cookieProperties.getPath())
-                .maxAge(0) // 즉시 만료
-                .sameSite(cookieProperties.getSameSite())
-                .domain(cookieProperties.getDomain())
-                .build();
-        response.addHeader("Set-Cookie", cookie.toString());
+                .maxAge(maxAge)
+                .sameSite(cookieProperties.getSameSite());
+
+        String domain = cookieProperties.getDomain();
+        if (StringUtils.hasText(domain)) {
+            builder.domain(domain);
+        }
+        return builder.build();
     }
 }

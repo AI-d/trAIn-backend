@@ -3,6 +3,7 @@ package com.aid.train.backend.global.security.handler;
 import com.aid.train.backend.domain.user.service.AuthService;
 import com.aid.train.backend.domain.verification.dto.response.SocialCallbackResponseDto;
 import com.aid.train.backend.global.util.CookieUtil;
+import com.aid.train.backend.global.util.LogMaskingUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -60,14 +61,17 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
             if (callbackResponse.getIsNewUser()) {
                 // --- 신규 회원 ---
-                log.info("신규 소셜 사용자. 추가 정보 입력 페이지로 리다이렉트. Email: {}", callbackResponse.getEmail());
+                log.info("신규 소셜 사용자. 추가 정보 입력 페이지로 리다이렉트. Email: {}",
+                        LogMaskingUtil.maskEmail(callbackResponse.getEmail()));
                 // 프론트엔드의 추가 정보 입력 페이지로 리다이렉트, Pending Token을 쿼리 파라미터로 전달
                 targetUrl = UriComponentsBuilder.fromUriString(frontendBaseUrl + "/social-signup")
                         .queryParam("token", callbackResponse.getSocialSignupPendingToken())
                         .build().toUriString();
             } else {
                 // --- 기존 회원 ---
-                log.info("기존 소셜 사용자. 메인 페이지로 리다이렉트. Email: {}", callbackResponse.getEmail());
+                log.info("기존 소셜 사용자. 메인 페이지로 리다이렉트. Email: {}",
+                        LogMaskingUtil.maskEmail(callbackResponse.getEmail()));
+
 
                 // **핵심 변경사항**: AccessToken 대신 일회용 코드를 URL 파라미터로 전달
                 // 프론트엔드에서는 이 코드를 받아서 /api/v1/users/token/exchange API를 호출하여 AccessToken으로 교환해야 함
@@ -75,15 +79,16 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                         .queryParam("code", callbackResponse.getOneTimeCode())  // AccessToken → OneTimeCode 변경
                         .build().toUriString();
 
-                log.debug("기존 회원 일회용 코드 리다이렉트 URL 생성 완료. Code prefix: {}",
-                        callbackResponse.getOneTimeCode().substring(0, 8) + "...");
+                log.debug("기존 회원 일회용 코드 리다이렉트 URL 생성 완료. Code: {}",
+                        LogMaskingUtil.maskToken(callbackResponse.getOneTimeCode()));  // 접두어/**** 형태
             }
 
             // 2. 결정된 URL로 리다이렉트
             getRedirectStrategy().sendRedirect(request, response, targetUrl);
 
         } catch (Exception e) {
-            log.error("OAuth2 로그인 처리 실패 - Provider: {}, 오류: {}", registrationId, e.getMessage(), e);
+            log.error("OAuth2 로그인 처리 실패 - Provider: {}, 오류: {}",
+                    registrationId, LogMaskingUtil.maskSensitiveData(e.getMessage()), e);
             String errorUrl = UriComponentsBuilder.fromUriString(frontendBaseUrl + "/login")
                     .queryParam("error", "oauth_processing_failed")
                     .build().toUriString();

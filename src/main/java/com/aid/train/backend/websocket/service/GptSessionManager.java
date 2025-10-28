@@ -8,11 +8,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import jakarta.websocket.ContainerProvider;
+import jakarta.websocket.WebSocketContainer;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -94,43 +97,22 @@ public class GptSessionManager {
         try {
             log.info("GPT 세션 생성 시작 - sessionId: {},", sessionId);
 
-            // 1. WebSocket 클라이언트 생성
-            StandardWebSocketClient client = new StandardWebSocketClient();
+            // 1. WebSocket 컨테이너 생성 및 버퍼 크기 설정
+            WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+            
+            // 버퍼 크기를 2MB로 증가 (GPT 오디오 델타 처리용)
+            container.setDefaultMaxTextMessageBufferSize(2 * 1024 * 1024);  // 2MB
+            container.setDefaultMaxBinaryMessageBufferSize(2 * 1024 * 1024); // 2MB
+            
+            log.info("WebSocket 버퍼 크기 설정 완료 - 2MB");
 
-            // 2. GPT 응답 핸들러 등록
+            // 2. StandardWebSocketClient 생성
+            StandardWebSocketClient standardClient = new StandardWebSocketClient(container);
+
+            // 3. GPT 응답 핸들러 등록
             responseHandlers.put(sessionId, responseHandler);
 
-            // 3. GPT WebSocket 핸들러 생성
-            /*TextWebSocketHandler handler = new TextWebSocketHandler() {
-                @Override
-                public void afterConnectionEstablished(WebSocketSession session) {
-                    log.info("GPT WebSocket 연결 성공 - sessionId: {}", sessionId);
-                    gptSessions.put(sessionId, session);
-
-                }
-
-                @Override
-                protected void handleTextMessage(WebSocketSession session, TextMessage message) {
-                    // GPT 응답 수신 → responseHandler로 전달
-                    String payload = message.getPayload();
-
-                    GptResponseHandler handler = responseHandlers.get(sessionId);
-                    if (handler != null) {
-                        handler.handleGptResponse(sessionId, payload);
-                    }
-                }
-
-                @Override
-                public void handleTransportError(WebSocketSession session, Throwable exception) {
-                    log.error("GPT WebSocket 에러 - sessionId: {}", sessionId, exception);
-                }
-            };*/
-
-            // 4. GPT API에 WebSocket 연결 (Authorization 헤더 포함)
-            // GPT Realtime API는 URL에 파라미터로 인증 정보 전달
-            // wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-10-15
-
-            // Authorization 헤더 추가
+            // 4. Authorization 헤더 추가
             org.springframework.web.socket.WebSocketHttpHeaders headers =
                     new org.springframework.web.socket.WebSocketHttpHeaders();
             headers.add("Authorization", "Bearer " + openAiApiKey);
@@ -140,7 +122,7 @@ public class GptSessionManager {
 
             URI uri = new URI("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01");
 
-            CompletableFuture<WebSocketSession> future = client.execute(
+            CompletableFuture<WebSocketSession> future = standardClient.execute(
 
                     new TextWebSocketHandler() {
                         @Override
@@ -170,7 +152,9 @@ public class GptSessionManager {
                                     log.info("GPT 세션 초기화 완료 - 프롬프트 전송 시작");
 
                                     String prompt = objectMapper.writeValueAsString(initMessage);
-                                    session.sendMessage(new TextMessage(prompt));
+                                    synchronized(session) {
+                                        session.sendMessage(new TextMessage(prompt));
+                                    }
 
                                     log.info("GPT 시나리오 전송 완료 - sessionId: {}", sessionId);
                                     return;
@@ -189,6 +173,22 @@ public class GptSessionManager {
                         @Override
                         public void handleTransportError(WebSocketSession session, Throwable exception) {
                             log.error("GPT WebSocket 에러 - sessionId: {}", sessionId, exception);
+                        }
+
+                        @Override
+                        public void afterConnectionClosed(WebSocketSession session, CloseStatus status)  {
+                            log.error("GPT WebSocket 연결 종료 감지 - sessionId: {}, Status: {} ({})",
+                                    sessionId, status.getCode(), status.getReason());
+
+                            // 세션 정리
+                            gptSessionMap.remove(sessionId);
+                            responseHandlers.remove(sessionId);
+                            
+                            // 1009 에러는 로그만 남기고 재연결은 하지 않음
+                            // (버퍼 크기를 2MB로 증가시켰으므로 재발하지 않아야 함)
+                            if (status.getCode() == 1009) {
+                                log.error("메시지 크기 초과 에러 발생 - 버퍼 크기 확인 필요 - sessionId: {}", sessionId);
+                            }
                         }
                     },
                     headers, // WebSocketHttpHeaders
@@ -259,17 +259,25 @@ public class GptSessionManager {
      * @param sessionId 대화 세션 ID
      * @param message 전송할 JSON 메시지
      */
-    private void sendToGpt(String sessionId, String message) {
+    public void sendToGpt(String sessionId, String message) {
         GptSession session = gptSessionMap.get(sessionId);
         WebSocketSession gptWsSession = session.getWebSocketSession();
 
+        if (session == null) {
+            log.error("GPT 세션을 찾을 수 없음 - sessionId: {}", sessionId);
+            log.error("현재 등록된 세션들: {}", gptSessionMap.keySet());
+            return;
+        }
+
         if (gptWsSession == null || !gptWsSession.isOpen()) {
-            log.error("GPT 세션이 없거나 닫혀있음 - sessionId: {}", sessionId);
+            log.error("GPT WebSocket이 없거나 닫혀있음 - sessionId: {}", sessionId);
             return;
         }
 
         try {
-            gptWsSession.sendMessage(new TextMessage(message));
+            synchronized(gptWsSession) {
+                gptWsSession.sendMessage(new TextMessage(message));
+            }
         } catch (Exception e) {
             log.error("GPT 메시지 전송 실패 - sessionId: {}", sessionId, e);
         }
@@ -292,7 +300,9 @@ public class GptSessionManager {
      * @return 존재 여부
      */
     public boolean hasGptSession(String sessionId) {
-        WebSocketSession session = gptSessionMap.get(sessionId).getWebSocketSession();
+        GptSession gptSession = gptSessionMap.get(sessionId);
+        if (gptSession == null) return false;
+        WebSocketSession session = gptSession.getWebSocketSession();
         return session != null && session.isOpen();
     }
 

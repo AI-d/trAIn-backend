@@ -2,6 +2,7 @@ package com.aid.train.backend.global.security.handler;
 
 import com.aid.train.backend.global.exception.enums.ErrorCode;
 import com.aid.train.backend.global.util.ErrorResponseWriter;
+import com.aid.train.backend.global.util.LogMaskingUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +30,9 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         ErrorCode errorCode = ErrorCode.UNAUTHORIZED;
 
         log.warn("인증 실패 응답: URI: {}, ErrorCode: {}, Message: {}",
-                request.getRequestURI(), errorCode.getCode(), authException.getMessage());
+                LogMaskingUtil.maskSensitiveData(request.getRequestURI()),
+                errorCode.getCode(),
+                LogMaskingUtil.maskSensitiveData(authException.getMessage()));
 
         ErrorResponseWriter.write(
                 request,

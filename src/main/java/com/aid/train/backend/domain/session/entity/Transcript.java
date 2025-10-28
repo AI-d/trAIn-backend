@@ -91,4 +91,62 @@ public class Transcript {
         }
         return null;
     }
+
+    // ========================================
+    // 음성 인식 신뢰도 관련 메서드
+    // @author 왕택준
+    // @since 1.0.0
+    // ========================================
+
+    /**
+     * 음성 인식 신뢰도 점수를 반환합니다.
+     * null인 경우 기본값 0.8(80%)을 반환합니다.
+     *
+     * @return 신뢰도 점수 (0.0 ~ 1.0)
+     */
+    public Float getEffectiveConfidenceScore() {
+        return confidenceScore != null ? confidenceScore : 0.8f;
+    }
+
+    /**
+     * 신뢰도 수준을 문자열로 반환합니다.
+     *
+     * @return 신뢰도 수준 ("높음", "보통", "낮음", "측정되지 않음")
+     */
+    public String getConfidenceLevel() {
+        if (confidenceScore == null) {
+            return "측정되지 않음";
+        }
+        if (confidenceScore >= 0.95f) {
+            return "높음";
+        }
+        if (confidenceScore >= 0.7f) {
+            return "보통";
+        }
+        return "낮음";
+    }
+
+    /**
+     * 해당 발화가 신뢰할 수 있는 품질인지 확인합니다.
+     * null이거나 0.7 이상이면 신뢰할 수 있는 것으로 판단합니다.
+     *
+     * @return 신뢰할 수 있으면 true, 그렇지 않으면 false
+     */
+    public boolean isReliable() {
+        return confidenceScore == null || confidenceScore >= 0.7f;
+    }
+
+    /**
+     * 피드백 분석에 포함할 수 있는 발화인지 확인합니다.
+     * 사용자 발화이면서 신뢰할 수 있고, 의미있는 내용이어야 합니다.
+     *
+     * @return 분석 대상이면 true, 그렇지 않으면 false
+     */
+    public boolean isAnalyzable() {
+        return speaker == Speaker.USER
+                && content != null
+                && !content.trim().isEmpty()
+                && content.trim().length() > 3
+                && isReliable();
+    }
 }

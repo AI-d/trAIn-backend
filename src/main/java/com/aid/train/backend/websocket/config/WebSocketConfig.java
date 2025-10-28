@@ -4,10 +4,14 @@ import com.aid.train.backend.websocket.handler.AudioHandler;
 import com.aid.train.backend.websocket.handler.FeedbackHandler;
 import com.aid.train.backend.websocket.handler.SignalingHandler;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
 
 /**
  * WebSocket 연결을 설정하기 위한 설정 클래스
@@ -16,6 +20,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
  * - 3개의 WebSocket 엔드포인트 등록
  * - CORS 정책 설정
  * - 각 핸들러와 URL 매핑
+ * - WebSocket 메시지 버퍼 크기 설정
  *
  * 엔드포인트:
  * 1. /ws/audio/{sessionId} - 음성 데이터 송수신 (AudioHandler)
@@ -24,7 +29,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
  *
  * @author 김경민
  * @since 2025-10-15
- * @version 1.2.0
+ * @version 1.3.0
  */
 @Configuration
 @EnableWebSocket
@@ -74,5 +79,29 @@ public class WebSocketConfig implements WebSocketConfigurer {
                         // "https://dialogym.shop",
                         // "https://www.dialogym.shop"
                 );
+    }
+
+    /**
+     * WebSocket 컨테이너 설정
+     * 
+     * GPT Realtime API의 큰 오디오 델타 메시지를 처리하기 위해
+     * 메시지 버퍼 크기를 증가시킵니다.
+     * 
+     * @return ServletServerContainerFactoryBean
+     */
+    @Bean
+    public ServletServerContainerFactoryBean createWebSocketContainer() {
+        ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
+        
+        // 텍스트 메시지 버퍼 크기: 1MB (GPT 오디오 델타 처리용)
+        container.setMaxTextMessageBufferSize(1024 * 1024);
+        
+        // 바이너리 메시지 버퍼 크기: 1MB
+        container.setMaxBinaryMessageBufferSize(1024 * 1024);
+        
+        // 세션 타임아웃: 15분
+        container.setMaxSessionIdleTimeout(15 * 60000L);
+        
+        return container;
     }
 }

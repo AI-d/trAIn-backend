@@ -2,6 +2,7 @@ package com.aid.train.backend.domain.user.dto.request;
 
 import com.aid.train.backend.domain.terms.dto.request.ConsentRequestDto;
 import com.aid.train.backend.domain.user.enums.JobType;
+import com.aid.train.backend.global.util.LogMaskingUtil;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -163,4 +164,21 @@ public class SignupRequestDto {
         }
         return true;
     }
+
+    /**
+     * 로그 출력 시 민감정보(이메일, 비밀번호, 생년월일 등)를 마스킹합니다.
+     * 디버깅 중 toString() 호출로 인해 정보가 유출되지 않도록 보호합니다.
+     */
+    @Override
+    public String toString() {
+        return "SignupRequestDto(" +
+                "email=" + LogMaskingUtil.maskEmail(email) +
+                ", name=" + LogMaskingUtil.maskSensitiveData(name) +
+                ", password=****" +
+                ", birthDate=****" +
+                ", jobType=" + (jobType != null ? jobType.name() : "null") +
+                ", jobDetail=" + LogMaskingUtil.maskSensitiveData(jobDetail) +
+                ")";
+    }
+
 }

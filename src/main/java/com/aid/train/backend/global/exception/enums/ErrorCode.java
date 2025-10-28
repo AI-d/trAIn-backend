@@ -80,13 +80,6 @@ public enum ErrorCode {
     SESSION_NOT_FOUND("SESSION_001", "세션을 찾을 수 없습니다.", 404),
     SESSION_ALREADY_COMPLETED("SESSION_002", "이미 종료된 세션입니다.", 400),
     SESSION_INVALID_STATUS("SESSION_003", "유효하지 않은 세션 상태입니다.", 400),
-
-    // 비즈니스 에러 코드
-    // =========================
-    // 세션 관련
-    // =========================
-    // SESSION_NOT_FOUND("SESSION_NOT_FOUND", "세션을 찾을 수 없습니다.", 404), <- 충돌
-    // SESSION_ALREADY_COMPLETED("SESSION_ALREADY_COMPLETED", "이미 완료된 세션입니다.", 409), < -충돌
     SESSION_NOT_OWNER("SESSION_NOT_OWNER", "세션 소유자가 아닙니다.", 403),
 
     // =========================
@@ -105,6 +98,8 @@ public enum ErrorCode {
     // =========================
     AI_API_ERROR("AI_API_ERROR", "AI API 호출 중 오류가 발생했습니다.", 500),
     AI_RESPONSE_PARSE_ERROR("AI_RESPONSE_PARSE_ERROR", "AI 응답 파싱 중 오류가 발생했습니다.", 500),
+    AI_ANALYSIS_FAILED("AI_ANALYSIS_FAILED", "AI 분석에 실패했습니다.", 500),
+    INSUFFICIENT_DIALOGUE_CONTENT("INSUFFICIENT_DIALOGUE_CONTENT", "분석할 대화 내용이 부족합니다.", 400),
 
     // =========================
     // 비즈니스 로직 관련
@@ -120,5 +115,4 @@ public enum ErrorCode {
     private final String code;
     private final String message;
     private final int status;
-
 }
