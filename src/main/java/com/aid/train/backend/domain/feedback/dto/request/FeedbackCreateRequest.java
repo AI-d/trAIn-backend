@@ -52,7 +52,7 @@ public record FeedbackCreateRequest(
         Integer totalScore,
 
         /**
-         * 발화속도 점수 (0-30)
+         * 발화속도 점수 (0-25)
          * <p>
          * 너무 빠르거나 느리지 않은 적절한 말하기 속도를 평가합니다.
          * 상황에 맞는 말하기 속도를 유지했는지 분석합니다.
@@ -65,7 +65,7 @@ public record FeedbackCreateRequest(
         Integer speechRateScore,
 
         /**
-         * 추임새 점수 (0-20)
+         * 추임새 점수 (0-25)
          * <p>
          * "음...", "그...", "아..." 등 불필요한 표현의 빈도를 평가합니다.
          * 점수가 높을수록 추임새가 적어 좋은 것입니다.

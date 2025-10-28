@@ -50,7 +50,7 @@ public record FeedbackStatsResponse(
         Double averageScore,
 
         /**
-         * 발화속도 평균 점수 (0-30)
+         * 발화속도 평균 점수 (0-25)
          * <p>
          * 적절한 말하기 속도 항목의 평균 점수입니다.
          * 너무 빠르거나 느리지 않은 적절한 속도 유지 능력을 나타냅니다.
@@ -60,7 +60,7 @@ public record FeedbackStatsResponse(
         Double averageSpeechRateScore,
 
         /**
-         * 추임새 평균 점수 (0-20)
+         * 추임새 평균 점수 (0-25)
          * <p>
          * "음...", "그..." 등 불필요한 표현 줄이기 항목의 평균 점수입니다.
          * 점수가 높을수록 추임새가 적어 좋은 것입니다.
