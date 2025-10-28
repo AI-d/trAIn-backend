@@ -5,6 +5,7 @@ import com.aid.train.backend.websocket.dto.client.IceCandidateMessage;
 import com.aid.train.backend.websocket.dto.client.OfferMessage;
 import com.aid.train.backend.websocket.model.MessageType;
 import com.aid.train.backend.websocket.service.GptSessionManager;
+import com.aid.train.backend.websocket.service.WebRtcPeerConnectionManager;
 import com.aid.train.backend.websocket.service.WebRtcStateManager;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,6 +51,7 @@ public class SignalingHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
     private final WebRtcStateManager webRtcStateManager;
     private final GptSessionManager gptSessionManager;
+    private final WebRtcPeerConnectionManager webRtcPeerConnectionManager;
 
     /**
      * sessionId -> WebSocketSession 매핑
@@ -100,9 +102,30 @@ public class SignalingHandler extends TextWebSocketHandler {
                     sessionId, messageType);
 
             switch (messageType) {
-                case OFFER -> handleOffer(session, payload);
+                case OFFER -> {
+                    // handleOffer(session, payload);
+                    OfferMessage offer = objectMapper.convertValue(jsonNode, OfferMessage.class);
+                    webRtcStateManager.updateState(sessionId, WebRtcStateManager.State.CONNECTING);
+
+                    String answerSdp = webRtcPeerConnectionManager.connectToGptRealtime(sessionId, offer.getSdp());
+
+                    String response = String.format("""
+                    {
+                      "type": "ANSWER",
+                      "sdp": "%s"
+                    }
+                    """, answerSdp.replace("\r", "").replace("\n", "\\n"));
+                    session.sendMessage(new TextMessage(response));
+                    webRtcStateManager.updateState(sessionId, WebRtcStateManager.State.CONNECTED);
+                }
                 case ANSWER -> handleAnswer(session, payload);
-                case ICE_CANDIDATE -> handleIceCandidate(session, payload);
+                case ICE_CANDIDATE -> {
+                    // handleIceCandidate(session, payload);
+                    JsonNode candidateNode = jsonNode.get("candidate");
+                    Map<String, Object> candidate = objectMapper.convertValue(candidateNode, Map.class);
+                    webRtcPeerConnectionManager.addRemoteIceCandidate(sessionId, candidate);
+                    log.info("ICE Candidate 수신 - sessionId: {}", sessionId);
+                }
                 default -> log.warn("SignalingHandler - 알 수 없는 메시지 타입 - type: {}", messageType);
             }
 
@@ -143,7 +166,7 @@ public class SignalingHandler extends TextWebSocketHandler {
         webRtcStateManager.updateState(sessionId, WebRtcStateManager.State.CONNECTING);
 
         // Gpt Realtime API 로 Offer 전송
-        String gptAnswerSdp = gptSessionManager.connectToGptRealtime(sessionId, offer.getSdp());
+        String gptAnswerSdp = webRtcPeerConnectionManager.connectToGptRealtime(sessionId, offer.getSdp());
 
         // TODO: 실제 WebRTC Answer 생성 로직
         // 현재는 Mock Answer 반환

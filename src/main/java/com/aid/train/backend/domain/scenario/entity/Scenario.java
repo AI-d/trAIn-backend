@@ -30,6 +30,9 @@ public class Scenario
     @Column(nullable = false, length = 120)
     private String title;
 
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String role;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -88,6 +91,7 @@ public class Scenario
         return Scenario.builder()
                 .title(dto.title())
                 .description(dto.description())
+                .role(dto.role())
                 .prompt(dto.prompt())
                 .voice(dto.voice())
                 .difficulty(dto.difficulty())
@@ -104,6 +108,7 @@ public class Scenario
     public static void updateStatus(Scenario scenario) {
         scenario.setStatus(Status.PUBLISHED);
     }
+
 
 }
 

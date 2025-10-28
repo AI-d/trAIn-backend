@@ -92,7 +92,7 @@ public class GptSessionManager {
      * @param sessionId 대화 세션 ID
      * @param responseHandler GPT 응답을 처리할 핸들러
      */
-    public CompletableFuture<WebSocketSession> createGptSession(String sessionId, SessionInitMessage initMessage, GptResponseHandler responseHandler) {
+    /*public CompletableFuture<WebSocketSession> createGptSession(String sessionId, SessionInitMessage initMessage, GptResponseHandler responseHandler) {
 
         try {
             log.info("GPT 세션 생성 시작 - sessionId: {},", sessionId);
@@ -211,7 +211,7 @@ public class GptSessionManager {
             throw new RuntimeException("GPT 세션 생성 실패: " + e.getMessage(), e);
         }
 
-    }
+    }*/
 
     /**
      * GPT에 음성 데이터를 전송합니다.
@@ -229,7 +229,7 @@ public class GptSessionManager {
      * @param sessionId 대화 세션 ID
      * @param audioData PCM 16kHz 음성 데이터 (바이트 배열)
      */
-    public void sendAudioToGpt(String sessionId, byte[] audioData) {
+   /* public void sendAudioToGpt(String sessionId, byte[] audioData) {
         try {
             // 1. 음성 데이터를 Base64로 인코딩
             String base64Audio = Base64.getEncoder().encodeToString(audioData) ;
@@ -253,12 +253,12 @@ public class GptSessionManager {
         }
     }
 
-    /**
+    *//**
      * GPT WebSocket으로 메시지를 전송합니다.
      *
      * @param sessionId 대화 세션 ID
      * @param message 전송할 JSON 메시지
-     */
+     *//*
     public void sendToGpt(String sessionId, String message) {
         GptSession session = gptSessionMap.get(sessionId);
         WebSocketSession gptWsSession = session.getWebSocketSession();
@@ -281,7 +281,7 @@ public class GptSessionManager {
         } catch (Exception e) {
             log.error("GPT 메시지 전송 실패 - sessionId: {}", sessionId, e);
         }
-    }
+    }*/
 
     /**
      * GPT 세션을 조회합니다.
@@ -385,7 +385,7 @@ public class GptSessionManager {
     }
 
 
-    public String connectToGptRealtime(String sessionId, String clientOfferSdp) {
+    /*public String connectToGptRealtime(String sessionId, String clientOfferSdp) {
         try {
             webRtcStateManager.updateState(sessionId, WebRtcStateManager.State.CONNECTING);
             log.info("connectToGptRealtime() 호출됨 - sessionId: {}", sessionId);
@@ -420,5 +420,5 @@ public class GptSessionManager {
             log.error("gpt 연결 실패: {}", e.getMessage());
             throw new RuntimeException(e);
         }
-    }
+    }*/
 }

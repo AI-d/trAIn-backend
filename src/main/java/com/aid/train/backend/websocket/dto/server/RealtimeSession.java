@@ -12,10 +12,10 @@ public record RealtimeSession (
         String model,
         String instructions,
         String voice,
-        
+
         @JsonProperty("turn_detection")
         Object turnDetection,  // null이면 Manual 모드, Map이면 Server VAD 설정
-        
+
         @JsonProperty("input_audio_transcription")
         InputAudioTranscription inputAudioTranscription  // STT 활성화 설정
 ) {

@@ -1,11 +1,9 @@
 package com.aid.train.backend.websocket.config;
 
-import com.aid.train.backend.websocket.handler.AudioHandler;
 import com.aid.train.backend.websocket.handler.FeedbackHandler;
 import com.aid.train.backend.websocket.handler.SignalingHandler;
+import com.aid.train.backend.websocket.handler.TranscriptHandler;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
-import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -36,9 +34,10 @@ import org.springframework.web.socket.server.standard.ServletServerContainerFact
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketConfigurer {
 
-    private final AudioHandler audioHandler;
+    // private final AudioHandler audioHandler;
     private final SignalingHandler signalingHandler;
     private final FeedbackHandler feedbackHandler;
+    private final TranscriptHandler transcriptHandler;
 
     /**
      * WebSocket 핸들러를 등록합니다.
@@ -54,16 +53,25 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
 
         // 1. Audio WebSocket 엔드포인트 - 음성 데이터 송수신
-        registry.addHandler(audioHandler, "/ws/audio/{sessionId}")
+        /*registry.addHandler(audioHandler, "/ws/audio/{sessionId}")
                 .setAllowedOriginPatterns(
                         "*"  // 개발 환경: 모든 도메인 허용
                         // 프로덕션 환경에서는 아래 주석 해제하고 "*" 제거
                         // "https://dialogym.shop",
                         // "https://www.dialogym.shop"
-                );
+                );*/
 
         // 2. Signaling WebSocket 엔드포인트 - WebRTC 연결 설정
-        registry.addHandler(signalingHandler, "/ws/signaling/{sessionId}")
+        /*registry.addHandler(signalingHandler, "/ws/signaling/{sessionId}")
+                .setAllowedOriginPatterns(
+                        "*"  // 개발 환경: 모든 도메인 허용
+                        // 프로덕션 환경에서는 아래 주석 해제하고 "*" 제거
+                        // "https://dialogym.shop",
+                        // "https://www.dialogym.shop"
+                );*/
+
+        // transcript 및 세션 연결 WebSocket 엔드포인트
+        registry.addHandler(transcriptHandler, "/ws/transcript/{sessionId}")
                 .setAllowedOriginPatterns(
                         "*"  // 개발 환경: 모든 도메인 허용
                         // 프로덕션 환경에서는 아래 주석 해제하고 "*" 제거

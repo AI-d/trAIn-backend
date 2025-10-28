@@ -38,8 +38,8 @@ public class TranscriptService {
      * @param sessionId 세션 ID
      * @param content 발화 내용
      */
-    public void saveUserTranscript(String sessionId, String content) {
-        saveTranscript(sessionId, Speaker.USER, content);
+    public void saveUserTranscript(String sessionId, String content, Long startTime, Long endTime) {
+        saveTranscript(sessionId, Speaker.USER, content, startTime, endTime);
     }
 
     /**
@@ -48,8 +48,8 @@ public class TranscriptService {
      * @param sessionId 세션 ID
      * @param content 발화 내용
      */
-    public void saveAiTranscript(String sessionId, String content) {
-        saveTranscript(sessionId, Speaker.AI, content);
+    public void saveAiTranscript(String sessionId, String content, Long startTime, Long endTime) {
+        saveTranscript(sessionId, Speaker.AI, content, startTime, endTime);
     }
 
     /**
@@ -59,7 +59,7 @@ public class TranscriptService {
      * @param speaker 발화자 (USER 또는 AI)
      * @param content 발화 내용
      */
-    private void saveTranscript(String sessionId, Speaker speaker, String content) {
+    private void saveTranscript(String sessionId, Speaker speaker, String content, Long startTime, Long endTime) {
         try {
             log.info("발화 저장 시작 - sessionId: {}, speaker: {}, content: {}",
                     sessionId, speaker, content);
@@ -72,6 +72,8 @@ public class TranscriptService {
                     .dialogueSession(dialogueSession)
                     .speaker(speaker)
                     .content(content)
+                    .startTimeMs(startTime / 1000L)
+                    .endTimeMs(endTime / 1000L)
                     .timestamp(LocalDateTime.now())
                     .build();
 

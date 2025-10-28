@@ -20,6 +20,9 @@ public record ScenarioRequestDto (
         @NotBlank(message = "프롬프트는 필수 입니다.")
         String prompt,
 
+        @NotBlank(message = "AI의 역할 지정은 필수 입니다.")
+        String role,
+
         @NotNull
         Voice voice,
 
