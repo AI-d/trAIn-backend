@@ -7,6 +7,7 @@ import com.aid.train.backend.domain.session.entity.DialogueSession;
 import com.aid.train.backend.domain.session.enums.SessionStatus;
 import com.aid.train.backend.domain.session.service.DialogueSessionService;
 import com.aid.train.backend.domain.user.dto.response.UserProfileResponseDto;
+import com.aid.train.backend.domain.user.entity.User;
 import com.aid.train.backend.domain.user.service.UserService;
 import com.aid.train.backend.global.exception.TrainException;
 import com.aid.train.backend.global.response.ApiResponse;
@@ -65,9 +66,12 @@ public class RealtimeSessionController {
             throw new TrainException(SESSION_ALREADY_COMPLETED);
         }
 
+        // 3. 세션 정보에서 유저 정보 추출
+        User user = session.getUser();
+
         // 3. 프롬프트 생성
         Scenario scenario = session.getScenario();
-        String instructions = scenarioService.createPrompt(scenario);
+        String instructions = scenarioService.createPrompt(scenario, user);
         log.debug("프롬프트 생성 완료 - scenarioId: {}, title: {}", scenario.getId(), scenario.getTitle());
 
         String url = "https://api.openai.com/v1/realtime/sessions";
@@ -81,7 +85,10 @@ public class RealtimeSessionController {
         request.put("model", req.model());
         request.put("voice", req.voice());
         request.put("instructions", instructions);
-        request.put("turn_detection", null);  // null 가능
+        request.put("turn_detection", Map.of(
+                "type", "server_vad",
+                "create_response", false
+        ));
         request.put("input_audio_transcription", Map.of(
                 "model", req.sttModel(),
                 "language", req.language()
