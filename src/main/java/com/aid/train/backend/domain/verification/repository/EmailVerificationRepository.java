@@ -77,4 +77,15 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
     @Query("SELECT COUNT(ev) FROM EmailVerification ev WHERE ev.user.id = :userId AND ev.email = :email " +
             "AND ev.createdAt > :after")
     long countRecentTokens(@Param("userId") Long userId, @Param("email") String email, @Param("after") LocalDateTime after);
+
+    /**
+     * 특정 이메일의 미인증 토큰을 모두 삭제합니다.
+     * 재발송 시 기존 코드를 무효화하기 위해 사용합니다.
+     *
+     * @param email 이메일 주소
+     * @return 삭제된 레코드 수
+     */
+    @Modifying
+    @Query("DELETE FROM EmailVerification ev WHERE ev.email = :email AND ev.isVerified = false")
+    int deleteUnverifiedByEmail(@Param("email") String email);
 }

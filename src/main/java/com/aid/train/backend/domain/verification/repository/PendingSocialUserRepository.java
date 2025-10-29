@@ -63,7 +63,7 @@ public interface PendingSocialUserRepository extends JpaRepository<PendingSocial
     @Modifying
     @Query("DELETE FROM PendingSocialUser psu WHERE psu.expiryDate < :threshold OR psu.used = true")
     int deleteExpiredOrUsedTokens(@Param("threshold") LocalDateTime threshold);
-    
+
     // ===== 재요청 제한 =====
 
     /**
@@ -73,4 +73,15 @@ public interface PendingSocialUserRepository extends JpaRepository<PendingSocial
             "AND psu.providerId = :providerId AND psu.createdAt > :after")
     long countRecentTokens(@Param("provider") Provider provider, @Param("providerId") String providerId,
                            @Param("after") LocalDateTime after);
+
+    /**
+     * 특정 provider + providerId의 기존 레코드를 모두 삭제합니다.
+     * 새로운 소셜 로그인 시도 전에 이전 미완료 레코드를 정리합니다.
+     *
+     * @param provider   소셜 제공자
+     * @param providerId 소셜 플랫폼 고유 ID
+     */
+    @Modifying
+    @Query("DELETE FROM PendingSocialUser psu WHERE psu.provider = :provider AND psu.providerId = :providerId")
+    void deleteByProviderAndProviderId(@Param("provider") Provider provider, @Param("providerId") String providerId);
 }

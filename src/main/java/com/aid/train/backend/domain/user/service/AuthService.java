@@ -14,10 +14,10 @@ import com.aid.train.backend.domain.user.repository.RefreshTokenRepository;
 import com.aid.train.backend.domain.user.repository.SocialAccountRepository;
 import com.aid.train.backend.domain.user.repository.UserRepository;
 import com.aid.train.backend.domain.verification.dto.response.SocialCallbackResponseDto;
-import com.aid.train.backend.domain.verification.entity.PendingSocialUser;
 import com.aid.train.backend.domain.verification.entity.OneTimeCode;
-import com.aid.train.backend.domain.verification.repository.PendingSocialUserRepository;
+import com.aid.train.backend.domain.verification.entity.PendingSocialUser;
 import com.aid.train.backend.domain.verification.repository.OneTimeCodeRepository;
+import com.aid.train.backend.domain.verification.repository.PendingSocialUserRepository;
 import com.aid.train.backend.global.exception.TrainException;
 import com.aid.train.backend.global.exception.enums.ErrorCode;
 import com.aid.train.backend.global.security.jwt.JwtTokenProvider;
@@ -172,9 +172,16 @@ public class AuthService {
             // --- 신규 회원인 경우 ---
             log.info("신규 소셜 사용자 확인 ({}). Email: {}", provider, LogMaskingUtil.maskEmail(userInfo.email()));
 
+            // 1. 기존 미완료 레코드 삭제 (중복 방지)
+            pendingSocialUserRepository.deleteByProviderAndProviderId(provider, userInfo.providerId());
+            log.debug("기존 pending_social_users 레코드 정리 완료. Provider: {}, ProviderId: {}",
+                    provider, LogMaskingUtil.maskToken(userInfo.providerId()));
+
+            // 2. JWT 토큰 생성
             String pendingToken = jwtTokenProvider.generateSocialSignupPendingToken(
                     provider.name(), userInfo.providerId(), userInfo.email(), userInfo.name());
 
+            // 3. 새 레코드 저장
             PendingSocialUser pendingUser = PendingSocialUser.builder()
                     .pendingToken(pendingToken)
                     .provider(provider)
