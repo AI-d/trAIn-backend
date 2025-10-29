@@ -192,6 +192,7 @@ public class ScenarioService {
                 scenario.getDescription(),
                 scenario.getRole(),
                 scenario.getPrompt()
+
             );
 
     }
