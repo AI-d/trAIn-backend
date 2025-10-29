@@ -35,7 +35,8 @@ public class ScenarioRepositoryImpl implements ScenarioCustom{
                 .from(scenario)
                 .leftJoin(scenario.owner, user).fetchJoin()
                 .where(scenario.owner.id.eq(id),
-                        scenario.isDefault.isFalse())
+                        scenario.isDefault.isFalse(),
+                        scenario.status.ne(DELETED))
                 .fetch();
     }
 
@@ -43,7 +44,8 @@ public class ScenarioRepositoryImpl implements ScenarioCustom{
     public List<Scenario> findDefaultAll() {
         return factory
                 .selectFrom(scenario)
-                .where(scenario.isDefault.isTrue())
+                .where(scenario.isDefault.isTrue(),
+                        scenario.status.ne(DELETED))
                 .fetch();
     }
 
@@ -66,7 +68,8 @@ public class ScenarioRepositoryImpl implements ScenarioCustom{
                 .leftJoin(scenario.owner, user).fetchJoin()
                 .where(scenario.id.eq(scenarioId),
                         scenario.owner.id.eq(userId),
-                        scenario.isDefault.isFalse())
+                        scenario.isDefault.isFalse(),
+                        scenario.status.ne(DELETED))
                 .fetchOne();
 
         return Optional.ofNullable(s);

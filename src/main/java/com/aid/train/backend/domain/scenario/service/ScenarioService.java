@@ -82,9 +82,9 @@ public class ScenarioService {
     @Transactional(readOnly = true)
     public List<ScenarioResponseDto> findAllScenarioMadeUser(Long id) {
         List<Scenario> userScenarios = scenarioRepository.findAllByUserId(id);
-        if(userScenarios.isEmpty()) {
+       /* if(userScenarios.isEmpty()) {
             throw new TrainException(SCENARIO_NOT_FOUND);
-        }
+        }*/
         List<ScenarioResponseDto> scenarioList = userScenarios.stream()
                 .map(scenario -> ScenarioResponseDto.fromEntity(scenario))
                 .collect(Collectors.toList());
