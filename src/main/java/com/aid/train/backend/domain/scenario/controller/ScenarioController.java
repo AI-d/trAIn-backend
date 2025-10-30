@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/scenarios")
+@RequestMapping("/api/v1/scenarios")
 @RequiredArgsConstructor
 @Slf4j
 public class ScenarioController {
@@ -46,7 +46,7 @@ public class ScenarioController {
      * @param dto
      * @return
      */
-    @PutMapping
+    @PostMapping
     public ResponseEntity<?> createNewScenario(@RequestBody ScenarioRequestDto dto) {
         Scenario saved = scenarioService.createScenario(dto.ownerId(), dto);
         return ResponseEntity.ok().body(ApiResponse.success("시나리오 생성을 성공했습니다.", saved));

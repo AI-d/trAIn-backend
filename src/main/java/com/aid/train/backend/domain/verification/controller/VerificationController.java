@@ -6,6 +6,7 @@ import com.aid.train.backend.domain.user.service.AuthService;
 import com.aid.train.backend.domain.verification.dto.request.EmailResendRequestDto;
 import com.aid.train.backend.domain.verification.dto.request.EmailVerificationRequestDto;
 import com.aid.train.backend.domain.verification.dto.response.EmailVerificationResponseDto;
+import com.aid.train.backend.domain.verification.dto.response.ResendResponseDto;
 import com.aid.train.backend.domain.verification.service.VerificationService;
 import com.aid.train.backend.global.exception.dto.ErrorResponse;
 import com.aid.train.backend.global.response.ApiResponse;
@@ -42,10 +43,6 @@ public class VerificationController {
 
     /**
      * 이메일 인증을 확인합니다.
-     * 회원가입 후 이메일로 받은 6자리 코드와 인증 토큰을 검증합니다.
-     *
-     * @param requestDto 이메일 인증 요청 정보
-     * @return 인증 결과 정보
      */
     @Operation(summary = "이메일 인증 확인", description = "회원가입 후 이메일로 받은 6자리 코드와 인증 토큰을 검증합니다.")
     @ApiResponses({
@@ -61,32 +58,31 @@ public class VerificationController {
 
     /**
      * 만료된 이메일 인증 코드를 재발송합니다.
-     *
-     * @param requestDto 재발송 요청 정보
-     * @return 재발송 결과 메시지
+     * 새로운 인증 토큰을 반환합니다.
      */
-    @Operation(summary = "이메일 인증 코드 재발송", description = "만료된 이메일 인증 코드를 재발송합니다.")
+    @Operation(summary = "이메일 인증 코드 재발송", description = "만료된 이메일 인증 코드를 재발송하고 새로운 인증 토큰을 반환합니다.")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "재발송 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "재발송 성공", content = @Content(schema = @Schema(implementation = ResendResponseDto.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 유효성 검증 실패", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "410", description = "인증 세션 만료", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/email/resend")
-    public ResponseEntity<ApiResponse<String>> resendVerificationEmail(@Valid @RequestBody EmailResendRequestDto requestDto) {
-        verificationService.resendVerificationEmail(requestDto);
-        return ResponseEntity.ok(ApiResponse.success("인증 이메일이 재발송되었습니다.", null));
-    }
+    public ResponseEntity<ApiResponse<ResendResponseDto>> resendVerificationEmail(@Valid @RequestBody EmailResendRequestDto requestDto) {
+        // 새 토큰 받기
+        String newToken = verificationService.resendVerificationEmail(requestDto);
 
-    // 참고: /api/v1/verification/social/callback 엔드포인트는 SecurityConfig와 OAuth2SuccessHandler가 처리하므로
-    // 컨트롤러에 별도로 정의할 필요가 없습니다.
+        // 응답 DTO 생성
+        ResendResponseDto response = ResendResponseDto.builder()
+                .success(true)
+                .message("인증 코드가 재발송되었습니다.")
+                .emailVerificationToken(newToken)
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success("인증 이메일이 재발송되었습니다.", response));
+    }
 
     /**
      * 소셜 회원가입을 완료합니다.
-     * 소셜 로그인 후 신규 사용자가 추가 정보를 입력하여 회원가입을 완료하고 로그인 처리를 수행합니다.
-     *
-     * @param requestDto 소셜 회원가입 완료 요청 정보
-     * @param response   HttpServletResponse 객체 (RefreshToken 쿠키 설정을 위함)
-     * @return 로그인 응답 (AccessToken 포함, RefreshToken은 null)
      */
     @Operation(summary = "소셜 회원가입 완료", description = "소셜 로그인 후 신규 사용자가 추가 정보를 입력하여 회원가입을 완료합니다.")
     @ApiResponses({

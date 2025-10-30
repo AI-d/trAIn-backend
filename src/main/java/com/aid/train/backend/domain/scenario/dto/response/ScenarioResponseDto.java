@@ -9,6 +9,7 @@ import lombok.Builder;
 
 @Builder
 public record ScenarioResponseDto (
+        Long id,
 
         String title,
 
@@ -28,6 +29,7 @@ public record ScenarioResponseDto (
 ) {
     public static ScenarioResponseDto fromEntity(Scenario scenario) {
         return ScenarioResponseDto.builder()
+                .id(scenario.getId())
                 .title(scenario.getTitle())
                 .description(scenario.getDescription())
                 .prompt(scenario.getPrompt())
