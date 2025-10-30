@@ -87,4 +87,5 @@ public class ScenarioController {
         scenarioService.deleteScenario(userId, id);
         return ResponseEntity.ok().body(ApiResponse.success("시나리오 삭제에 성공했습니다", ""));
     }
+
 }
