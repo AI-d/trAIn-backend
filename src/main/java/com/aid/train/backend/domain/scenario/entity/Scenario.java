@@ -83,7 +83,7 @@ public class Scenario
 
     public enum Voice {  ALLOY, ASH, BALLAD, CORAL, ECHO, SAGE, SHIMMER, VERSE, MARIN, CEDAR  }
     public enum Difficulty { EASY, MEDIUM, HARD }
-    public enum Category { WORK, RELATIONSHIP, FAMILY, FRIEND }
+    public enum Category { WORK, RELATIONSHIP, FAMILY, FRIEND, DAILY }
     public enum Status { DRAFT, PUBLISHED, DELETED }
 
     // dto -> entity 편의 메소드

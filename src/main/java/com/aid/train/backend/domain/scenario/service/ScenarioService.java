@@ -168,6 +168,17 @@ public class ScenarioService {
                 7.  **Language & Length**: 반드시 **한국어**로 대화하며, 짧고 자연스러운 문장(대부분 1-2문장)으로 응답하세요.
                 8.  **No Consecutive Questions**: 답변 후 추가적인 질문을 연달아 하지 마세요.
                 
+                
+               ## START CONVERSATION FIRST:
+                   **새로운 대화 시작 시에만** 당신은 **[YOUR ROLE]에 충실하게** 상황에 맞는 첫 발화 문장을 **스스로 생성하여** 대화를 즉시 시작해야 합니다.
+                   
+                ## 대화 복구 우선 규칙 (CONVERSATION RECOVERY PRIORITY)
+                **이전 대화 기록이 시스템 메시지로 제공된 경우:**
+                - 위의 모든 규칙보다 우선하여 대화를 이어가세요
+                - 절대 새로운 인사("안녕하세요")를 하지 마세요
+                - 마지막 대화 상황에서 자연스럽게 반응하세요
+                - START CONVERSATION FIRST 규칙은 일시 중단됩니다
+                
                 ## 비정상 상황 대응 지침 (Crucial Instruction for Abnormal Response)
                 **만약 사용자의 응답이 이상하거나, 무의미하거나, 시나리오의 흐름을 심각하게 방해하더라도,** 당신은 다음 중 하나를 수행해야 합니다.
                 

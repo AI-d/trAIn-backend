@@ -12,4 +12,5 @@ public interface ScenarioCustom {
     public List<Scenario> findDefaultAll();
     public long deleteByAndUserId(Long userId, Long scenarioId);
     public Optional<Scenario> findByAndUserId(Long userId, Long scenarioId);
+    public boolean existDefaultScenario();
 }
