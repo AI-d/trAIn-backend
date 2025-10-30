@@ -74,4 +74,16 @@ public class ScenarioRepositoryImpl implements ScenarioCustom{
 
         return Optional.ofNullable(s);
     }
+
+    // 기본 시나리오가 존재 여부 조회
+    @Override
+    public boolean existDefaultScenario() {
+        List<Scenario> defaultScenario = factory
+                .selectFrom(scenario)
+                .where(scenario.isDefault.eq(true))
+                .fetch();
+
+        // 디폴트 시나리오가 있으면 true, 없으면 false
+        return !defaultScenario.isEmpty() ? true : false;
+    }
 }
