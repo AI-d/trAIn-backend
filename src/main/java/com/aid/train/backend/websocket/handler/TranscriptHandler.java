@@ -1,9 +1,12 @@
 package com.aid.train.backend.websocket.handler;
 
+import com.aid.train.backend.domain.session.dto.response.TranscriptResponse;
+import com.aid.train.backend.domain.session.entity.Transcript;
 import com.aid.train.backend.domain.session.service.TranscriptService;
 import com.aid.train.backend.websocket.service.SessionCoordinator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -12,8 +15,10 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -69,6 +74,37 @@ public class TranscriptHandler extends TextWebSocketHandler {
                 log.info("transcript 저장 - sessionId: {}, speaker: {}, content: {}", sessionId, speaker, content);
             }
 
+            if("SESSION_RECONNECT".equals(type)) {
+                try {
+                    List<Transcript> transcriptsList = transcriptService.getTranscripts(sessionId);
+
+                    // 응답 메시지 생성
+                    ObjectNode response = objectMapper.createObjectNode();
+                    response.put("type", "SESSION_RECOVERY");
+                    response.put("success", true);
+
+                    List<TranscriptResponse> transcripts = transcriptsList.stream()
+                            .map(transcript -> TranscriptResponse.from(transcript))
+                            .collect(Collectors.toList());
+
+                    JsonNode transcriptsNode = objectMapper.valueToTree(transcripts);
+                    response.set("transcripts", transcriptsNode);
+
+                    session.sendMessage(new TextMessage(response.toString()));
+
+                } catch (Exception e) {
+                    log.error("세션 복구 실패 - sessionId: {}", sessionId, e);
+
+                    ObjectNode errorResponse = objectMapper.createObjectNode();
+                    errorResponse.put("type", "SESSION_RECOVERY");
+                    errorResponse.put("success", false);
+                    errorResponse.put("errorMessage", "대화 내역 복구 실패");
+
+                    session.sendMessage(new TextMessage(errorResponse.toString()));
+                }
+
+            }
+
         } catch (Exception e) {
             log.error("transcript 저장 실패 - sessionId: {}", sessionId, e);
         }
@@ -121,4 +157,9 @@ public class TranscriptHandler extends TextWebSocketHandler {
         String[] parts = path.split("/");
         return parts[parts.length - 1];
     }
+
+    /**
+     * 재연결 시 대화 기록을 확인해서 프론트엔드로 대화 내용을 전송합니다.
+     *
+     */
 }
