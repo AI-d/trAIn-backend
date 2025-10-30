@@ -149,7 +149,7 @@ public class DialogueSessionController {
      * @param userId
      * @return
      */
-    @GetMapping("/scenario/{scenarioId}/user/{userId}/latest")
+    /*@GetMapping("/scenario/{scenarioId}/user/{userId}/latest")
     public ResponseEntity<?> getLatestSession(
             @PathVariable Long scenarioId,
             @PathVariable Long userId
@@ -168,7 +168,7 @@ public class DialogueSessionController {
         return ResponseEntity.ok(
                 ApiResponse.success("세션 조회 성공", response)
         );
-    }
+    }*/
 
     /**
      * 세션을 정상 종료합니다.
