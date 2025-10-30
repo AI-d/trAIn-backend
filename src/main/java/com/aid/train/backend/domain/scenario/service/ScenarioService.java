@@ -45,9 +45,9 @@ public class ScenarioService {
     @Transactional(readOnly = true)
     public List<ScenarioResponseDto> findDefaultScenarios() {
         List<Scenario> defaultScenarios = scenarioRepository.findDefaultAll();
-        if(defaultScenarios.isEmpty()) {
+        /*if(defaultScenarios.isEmpty()) {
             throw new TrainException(SCENARIO_NOT_FOUND);
-        }
+        }*/
         List<ScenarioResponseDto> defaultList = defaultScenarios.stream()
                 .map(scenario -> ScenarioResponseDto.fromEntity(scenario))
                 .collect(Collectors.toList());
