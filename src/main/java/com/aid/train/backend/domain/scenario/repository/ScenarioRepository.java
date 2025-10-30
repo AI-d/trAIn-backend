@@ -1,6 +1,7 @@
 package com.aid.train.backend.domain.scenario.repository;
 
 import com.aid.train.backend.domain.scenario.entity.Scenario;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -18,46 +19,54 @@ public interface ScenarioRepository extends JpaRepository<Scenario, Long> {
      * 전체 시나리오 목록을 조회합니다.
      * @return List<Scenario>
      */
-    @Query("SELECT s FROM Scenario s WHERE s.status <> 'DELETE'")
+    @Query("SELECT s FROM Scenario s WHERE s.status <> 'DELETED'")
     List<Scenario> findAll();
+
+    /**
+     * 단일 시나리오를 조회합니다.
+     * @return Optional<Scenario>
+     */
+    @Query("SELECT s FROM Scenario s WHERE s.status <> 'DELETED' AND s.id =:scenarioId")
+    Optional<Scenario> findById(@Param("scenarioId") Long scenarioId);
 
     /**
      * 사용자가 생성한 전체 시나리오 목록을 조회합니다.
      * @param id
      * @return List<Scenario>
      */
-    @Query("SELECT s FROM Scenario s JOIN FETCH s.owner WHERE s.status <> 'DELETE' AND s.owner.id = :ownerId")
+    @Query("SELECT s FROM Scenario s JOIN FETCH s.owner WHERE s.status <> 'DELETED' AND s.owner.id = :ownerId")
     List<Scenario> findAllByUserId(@Param("ownerId") Long id);
 
     /**
      * 기본 시나리오 목록을 조회합니다.
      * @return List<Scenario>
      */
-    @Query("SELECT s FROM Scenario s WHERE s.status <> 'DELETE' AND s.isDefault = true")
+    @Query("SELECT s FROM Scenario s WHERE s.status <> 'DELETED' AND s.isDefault = true")
     List<Scenario> findDefaultAll();
 
     /**
      * 사용자가 생성한 시나리오를 삭제합니다.
      * @param userId userId
      * @param scenarioId scenarioId
-     * @return long - 1이면 삭제, 0 이면 실패, 성공 여부를 반환
+     * @return int - 1이면 삭제, 0 이면 실패, 성공 여부를 반환
      */
-    @Modifying
+    @Transactional
+    @Modifying(clearAutomatically = true)
     @Query(" UPDATE Scenario s SET s.status = 'DELETED' WHERE s.owner.id = :userId AND s.id = :scenarioId AND s.isDefault = false")
-    long deleteByAndUserId(@Param("userId") Long userId, @Param("scenarioId") Long scenarioId);
+    int deleteByAndUserId(@Param("userId") Long userId, @Param("scenarioId") Long scenarioId);
 
     /**
      * 사용자가 생성한 시나리오를 조회합니다.
      * @param userId
      * @param scenarioId
-     * @return
+     * @return Optional<Scenario>
      */
     @Query("""
         SELECT s 
         FROM Scenario s 
         JOIN FETCH s.owner 
-        WHERE s.status <> 'DELETE' 
-        AND s.owner.id = :userID 
+        WHERE s.status <> 'DELETED' 
+        AND s.owner.id = :userId 
         AND s.id = :scenarioId
         AND s.isDefault = false
     """)
