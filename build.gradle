@@ -130,3 +130,7 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+bootJar {
+    archiveFileName = 'backend.jar'
+}
