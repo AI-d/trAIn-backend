@@ -4,7 +4,7 @@ name: Deploy Backend to EC2
 on:
   push:
     branches:
-      - ops/ci
+      - ops/cicd
     paths:
       # 백엔드 실행에 영향을 주는 파일만 감시하도록 수정
       - 'src/**'
