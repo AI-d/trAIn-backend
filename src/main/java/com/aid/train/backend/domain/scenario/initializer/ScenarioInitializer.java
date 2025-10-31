@@ -42,11 +42,10 @@ public class ScenarioInitializer {
         boolean hasDefault = scenarioRepository.existDefaultScenario();
         // 없으면 시나리오를 생성
         if(!hasDefault) {
-           scenarioRepository.saveAll(scenarioSeeds());
-           log.info("디폴트 시나리오를 생성했습니다.");
+            scenarioRepository.saveAll(scenarioSeeds());
+            log.info("디폴트 시나리오를 생성했습니다.");
+            return;
         }
-        log.info("디폴트 시나리오 생성에 실패했습니다.");
-
     }
 
     private List<Scenario> scenarioSeeds() {
@@ -218,4 +217,3 @@ public class ScenarioInitializer {
 
     }
 }
-
