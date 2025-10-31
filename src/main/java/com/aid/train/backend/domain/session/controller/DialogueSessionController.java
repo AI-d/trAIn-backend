@@ -144,6 +144,33 @@ public class DialogueSessionController {
     }
 
     /**
+     * 시나리오 아이디와 유저아이디로 세션을 조회합니다.
+     * @param scenarioId
+     * @param userId
+     * @return
+     */
+    /*@GetMapping("/scenario/{scenarioId}/user/{userId}/latest")
+    public ResponseEntity<?> getLatestSession(
+            @PathVariable Long scenarioId,
+            @PathVariable Long userId
+    ) {
+        // 이 시나리오+유저 조합의 가장 최근 세션 조회
+        DialogueSession session = dialogueSessionService
+                .findLatestByScenarioAndUser(scenarioId, userId);
+
+        if (session == null) {
+            return ResponseEntity.ok(
+                    ApiResponse.success("세션 없음", null)
+            );
+        }
+
+        SessionResponse response = SessionResponse.from(session);
+        return ResponseEntity.ok(
+                ApiResponse.success("세션 조회 성공", response)
+        );
+    }*/
+
+    /**
      * 세션을 정상 종료합니다.
      *
      * @param sessionId 세션 ID

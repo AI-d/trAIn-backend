@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Table(name="Scenario")
+@Table(name="scenario")
 @Entity
 @Builder
 @Getter

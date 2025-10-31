@@ -45,9 +45,9 @@ public class ScenarioService {
     @Transactional(readOnly = true)
     public List<ScenarioResponseDto> findDefaultScenarios() {
         List<Scenario> defaultScenarios = scenarioRepository.findDefaultAll();
-        if(defaultScenarios.isEmpty()) {
+        /*if(defaultScenarios.isEmpty()) {
             throw new TrainException(SCENARIO_NOT_FOUND);
-        }
+        }*/
         List<ScenarioResponseDto> defaultList = defaultScenarios.stream()
                 .map(scenario -> ScenarioResponseDto.fromEntity(scenario))
                 .collect(Collectors.toList());
@@ -106,7 +106,7 @@ public class ScenarioService {
      * 사용자가 생성한 시나리오를 삭제합니다.
      */
     public String deleteScenario(Long userId, Long scenarioId) {
-        long flag = scenarioRepository.deleteByAndUserId(userId, scenarioId);
+        int flag = scenarioRepository.deleteByAndUserId(userId, scenarioId);
         if(flag == 0) {
             throw new TrainException(SCENARIO_NOT_FOUND);
         }
