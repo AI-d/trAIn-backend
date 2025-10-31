@@ -95,9 +95,7 @@ public class SecurityConfig {
                                 // 테스트용 엔드포인트 허용 (필요시 제거)
                                 "/test/",
                                 // WebSocket 전체 허용
-                                "/ws/", "/ws/**",
-                                // 인증 API 허용
-                                "/api/**"
+                                "/ws/", "/ws/**"
 
                         ).permitAll()
                         // --- Authenticated API: 인증된 사용자만 접근 허용 ---

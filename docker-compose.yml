@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  # 로컬 개발용 MariaDB
+  db:
+    image: mariadb:10.11
+    container_name: dialogym-db-local
+    ports:
+      # 내 PC의 3306 포트와 컨테이너의 3306 포트를 연결
+      - "3306:3306"
+    environment:
+      # 1번 .env 파일의 DB_PASS=mariadb 와 일치시킵니다.
+      MARIADB_ROOT_PASSWORD: mariadb
+      MARIADB_DATABASE: dialogym
+    volumes:
+      # DB 데이터를 내 PC에 저장 (컨테이너가 삭제되어도 데이터 보존)
+      - dialogym-db-data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - dialogym-local-network
+
+volumes:
+  dialogym-db-data:
+
+networks:
+  dialogym-local-network:
+    driver: bridge

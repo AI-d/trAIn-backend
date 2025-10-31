@@ -73,7 +73,7 @@ spring:
             scope:
               - profile
               - email
-            redirect-uri: "{baseUrl}/login/oauth2/code/google"
+            redirect-uri: "${OAUTH_REDIRECT_BASE_URL:http://localhost:9090}/login/oauth2/code/google"
             client-name: Google
 
           kakao:
@@ -81,7 +81,7 @@ spring:
             client-secret: ${KAKAO_CLIENT_SECRET}
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
+            redirect-uri: "${OAUTH_REDIRECT_BASE_URL:http://localhost:9090}/login/oauth2/code/kakao"
             scope:
               - profile_nickname
               - account_email
@@ -92,7 +92,7 @@ spring:
             client-secret: ${NAVER_CLIENT_SECRET}
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/login/oauth2/code/naver"
+            redirect-uri: "${OAUTH_REDIRECT_BASE_URL:http://localhost:9090}/login/oauth2/code/naver"
             scope:
               - name
               - email
@@ -158,10 +158,10 @@ cookie:
   refresh-token-max-age: ${COOKIE_REFRESH_TOKEN_MAX_AGE:1209600}
 
   # Cookie Secure (HTTPS 전용)
-  secure: ${COOKIE_SECURE:false}
+  secure: ${COOKIE_SECURE:true}
 
   # Cookie SameSite (None, Lax, Strict)
-  same-site: ${COOKIE_SAME_SITE:Lax}
+  same-site: ${COOKIE_SAME_SITE:None}
 
   # HttpOnly 강제 적용
   http-only: true
@@ -282,7 +282,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
 
 logging:
   level:
@@ -296,5 +296,5 @@ decorator:
 
 cookie:
   secure: true
-  same-site: Strict
-  domain: .yourdomain.com
+  same-site: None
+  domain: .dialogym.shop
