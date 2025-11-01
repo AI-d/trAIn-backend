@@ -38,9 +38,9 @@ public class RefreshRateLimitFilter extends OncePerRequestFilter {
 
     // --- 정책 상수(필요시 yml로 뺄 수 있음) ---
     private static final String TARGET_PATH = "/api/v1/users/refresh";
-    private static final int WINDOW_SECONDS = 60;   // 윈도우: 60초
-    private static final int CAPACITY = 10;         // 버킷 최대 토큰
-    private static final int REFILL_TOKENS = 10;    // 윈도우당 보충 토큰 수
+    private static final int WINDOW_SECONDS = 10;   // 윈도우: 10초 (더 짧게)
+    private static final int CAPACITY = 2;          // 버킷 최대 토큰 (더 적게)
+    private static final int REFILL_TOKENS = 2;     // 윈도우당 보충 토큰 수
 
     // 캐시: 접근기준 10분 동안 사용 없으면 제거, 최대 100k 엔트리
     private final Cache<String, Bucket> bucketCache = Caffeine.newBuilder()
