@@ -68,7 +68,10 @@ public class SecurityConfig {
                                 // 인증/회원가입
                                 "/api/v1/users/signup",
                                 "/api/v1/users/login",
+                                "/api/v1/users/logout",
                                 "/api/v1/users/refresh",
+                                "/api/v1/users/token/exchange",
+                                "/api/v1/verification/social/complete",
 
                                 // 이메일 인증
                                 "/api/v1/verification/email",

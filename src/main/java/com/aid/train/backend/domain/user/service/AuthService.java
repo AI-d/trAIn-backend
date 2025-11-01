@@ -107,7 +107,12 @@ public class AuthService {
 
     /**
      * Refresh Token을 사용하여 새로운 Access Token 및 Refresh Token을 발급합니다.
+     * Refresh Token Rotation (RTR) 방식을 사용하여 보안을 강화합니다.
+     *
+     * @param refreshToken 현재 리프레시 토큰
+     * @return 새로운 AccessToken과 RefreshToken
      */
+    @Transactional
     public TokenRefreshResponseDto refreshAccessToken(String refreshToken) {
         RefreshToken storedToken = refreshTokenRepository.findByToken(refreshToken)
                 .orElseThrow(() -> new TrainException(ErrorCode.REFRESH_TOKEN_INVALID));
@@ -117,15 +122,22 @@ public class AuthService {
             throw new TrainException(ErrorCode.REFRESH_TOKEN_INVALID, "만료된 리프레시 토큰입니다.");
         }
 
-        refreshTokenRepository.delete(storedToken);
-
         Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
         String email = jwtTokenProvider.getEmailFromToken(refreshToken);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new TrainException(ErrorCode.USER_NOT_FOUND));
 
+        // 기존 토큰 삭제 (RTR 방식)
+        refreshTokenRepository.delete(storedToken);
+        refreshTokenRepository.flush(); // 즉시 DB에 반영하여 동시성 문제 방지
+
+        // 새로운 AccessToken과 RefreshToken 생성
         JwtTokenProvider.JwtResponse newTokens = jwtTokenProvider.generateTokens(userId, email);
+
+        // 새 RefreshToken을 DB에 저장
         saveRefreshToken(user, newTokens.refreshToken());
+
+        log.info("토큰 갱신 완료 (RTR). User ID: {}", userId);
 
         return TokenRefreshResponseDto.builder()
                 .accessToken(newTokens.accessToken())
@@ -234,14 +246,14 @@ public class AuthService {
     }
 
     /**
-     * 일회용 코드를 AccessToken으로 교환합니다. (DB 기반)
+     * 일회용 코드를 AccessToken과 RefreshToken으로 교환합니다. (DB 기반)
      *
      * @param code 일회용 코드
-     * @return AccessToken
+     * @return LoginResponseDto (AccessToken, RefreshToken, 사용자 정보 포함)
      * @throws TrainException 코드가 유효하지 않거나 만료된 경우
      */
     @Transactional
-    public String exchangeCodeForAccessToken(String code) {
+    public LoginResponseDto exchangeCodeForTokens(String code) {
         OneTimeCode oneTimeCode = oneTimeCodeRepository.findByCode(code)
                 .orElseThrow(() -> {
                     log.warn("일회용 코드 교환 실패 - 존재하지 않는 코드. Code: {}",
@@ -268,8 +280,35 @@ public class AuthService {
                     return new TrainException(ErrorCode.USER_NOT_FOUND);
                 });
 
-        log.info("일회용 코드 교환 성공. AccessToken 발급. User ID: {}", userId);
-        return jwtTokenProvider.generateAccessToken(user.getId(), user.getEmail());
+        // AccessToken과 RefreshToken 모두 생성
+        JwtTokenProvider.JwtResponse tokens = jwtTokenProvider.generateTokens(user.getId(), user.getEmail());
+
+        // RefreshToken을 DB에 저장
+        saveRefreshToken(user, tokens.refreshToken());
+
+        // 마지막 로그인 시간 업데이트
+        user.updateLastLogin();
+
+        log.info("일회용 코드 교환 성공. AccessToken 및 RefreshToken 발급. User ID: {}", userId);
+
+        return LoginResponseDto.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .name(user.getName())
+                .accessToken(tokens.accessToken())
+                .refreshToken(tokens.refreshToken())
+                .build();
+    }
+
+    /**
+     * 일회용 코드를 AccessToken으로 교환합니다. (하위 호환성 유지용)
+     * @deprecated exchangeCodeForTokens() 사용을 권장합니다.
+     */
+    @Deprecated
+    @Transactional
+    public String exchangeCodeForAccessToken(String code) {
+        LoginResponseDto response = exchangeCodeForTokens(code);
+        return response.getAccessToken();
     }
 
     /**
@@ -384,6 +423,7 @@ public class AuthService {
         pendingUser.markAsUsed();
         pendingSocialUserRepository.delete(pendingUser);
 
+        // 신규 회원이므로 기존 토큰 삭제 불필요
         JwtTokenProvider.JwtResponse tokens = jwtTokenProvider.generateTokens(newUser.getId(), newUser.getEmail());
         saveRefreshToken(newUser, tokens.refreshToken());
 

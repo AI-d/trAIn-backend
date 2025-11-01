@@ -133,17 +133,18 @@ public class UserController {
 
     /**
      * Access Token을 갱신합니다. (Refresh Token Rotation 적용)
-     * HttpOnly 쿠키의 RefreshToken을 사용하여 새로운 AccessToken(Body)과 RefreshToken(HttpOnly 쿠키)을 발급합니다.
+     * HttpOnly 쿠키의 RefreshToken을 사용하여 새로운 AccessToken과 RefreshToken을 발급합니다.
+     * 기존 RefreshToken은 무효화되고 새로운 RefreshToken이 발급됩니다.
      *
      * @param request  HttpServletRequest 객체 (쿠키 조회를 위함)
      * @param response HttpServletResponse 객체 (쿠키 갱신을 위함)
      * @return 갱신된 토큰 정보 (AccessToken 포함, RefreshToken은 null)
      * @throws TrainException RefreshToken이 없거나 유효하지 않을 때
      */
-    @Operation(summary = "Access Token 갱신 (RTR)", description = "HttpOnly 쿠키의 RefreshToken을 사용하여 새로운 AccessToken(Body)과 RefreshToken(쿠키)을 발급받습니다.")
+    @Operation(summary = "Access Token 갱신 (RTR)", description = "HttpOnly 쿠키의 RefreshToken을 사용하여 새로운 AccessToken과 RefreshToken을 발급받습니다. 기존 RefreshToken은 무효화됩니다.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "토큰 갱신 성공", content = @Content(schema = @Schema(implementation = TokenRefreshResponseDto.class))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Refresh Token이 없거나 유효하지 않음 (만료, 탈취 시도 등)", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Refresh Token이 없거나 유효하지 않음 (만료, 이미 사용됨 등)", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<TokenRefreshResponseDto>> refresh(HttpServletRequest request, HttpServletResponse response) {
@@ -155,37 +156,45 @@ public class UserController {
         // 새로운 Refresh Token으로 쿠키를 업데이트
         cookieUtil.addRefreshTokenCookie(response, responseDto.getRefreshToken());
 
-        // Body에서는 RefreshToken을 null로 설정
+        // Body에서는 RefreshToken을 null로 설정 (보안)
         responseDto.setRefreshToken(null);
 
         return ResponseEntity.ok(ApiResponse.success("토큰이 성공적으로 갱신되었습니다.", responseDto));
     }
 
     /**
-     * 일회용 코드를 AccessToken으로 교환합니다.
+     * 일회용 코드를 AccessToken과 RefreshToken으로 교환합니다.
      * 소셜 로그인 (기존 회원) 성공 직후 프론트엔드가 호출하는 API입니다.
      *
      * @param requestDto 교환할 일회용 코드를 포함한 DTO
-     * @return 발급된 AccessToken 정보
+     * @param response HttpServletResponse 객체 (쿠키 설정을 위함)
+     * @return 발급된 AccessToken 정보 (RefreshToken은 HttpOnly 쿠키로 전달)
      * @throws TrainException 코드가 유효하지 않거나 만료된 경우
      */
-    @Operation(summary = "일회용 코드-토큰 교환", description = "소셜 로그인 직후 받은 일회용 코드(URL 파라미터 'code')를 AccessToken(Body)으로 교환합니다.")
+    @Operation(summary = "일회용 코드-토큰 교환", description = "소셜 로그인 직후 받은 일회용 코드(URL 파라미터 'code')를 AccessToken(Body)과 RefreshToken(쿠키)으로 교환합니다.")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "토큰 교환 성공", content = @Content(schema = @Schema(implementation = AccessTokenResponseDto.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "토큰 교환 성공", content = @Content(schema = @Schema(implementation = LoginResponseDto.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 유효성 검증 실패", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "일회용 코드가 유효하지 않음 (만료, 사용됨 등)", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/token/exchange")
-    public ResponseEntity<ApiResponse<AccessTokenResponseDto>> exchangeToken(
+    public ResponseEntity<ApiResponse<LoginResponseDto>> exchangeToken(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "교환할 일회용 코드", required = true, content = @Content(schema = @Schema(implementation = ExchangeCodeRequestDto.class)))
-            @Valid @RequestBody ExchangeCodeRequestDto requestDto) {
+            @Valid @RequestBody ExchangeCodeRequestDto requestDto,
+            HttpServletResponse response) {
 
-        String accessToken = authService.exchangeCodeForAccessToken(requestDto.code());
+        LoginResponseDto loginResponse = authService.exchangeCodeForTokens(requestDto.code());
 
-        // AccessToken을 JSON Body로 반환
+        // RefreshToken을 HttpOnly 쿠키로 설정
+        cookieUtil.addRefreshTokenCookie(response, loginResponse.getRefreshToken());
+
+        // Body에서는 RefreshToken을 null로 설정 (API 계약 명확화)
+        loginResponse.setRefreshToken(null);
+
+        // AccessToken과 사용자 정보를 JSON Body로 반환
         return ResponseEntity.ok(ApiResponse.success(
                 "토큰 교환에 성공했습니다.",
-                new AccessTokenResponseDto(accessToken)
+                loginResponse
         ));
     }
 
