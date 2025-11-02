@@ -14,7 +14,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 /**
- * 이메일 발송 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. (리팩토링 버전)
+ * 이메일 발송 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
  *
  * @author 왕택준
  * @since 1.0.0
@@ -53,24 +53,40 @@ public class EmailService {
     }
 
     private String buildVerificationEmailHtml(String name, String otpCode) {
+        // Brand Colors
+        final String CALM_BLUE = "#5B7FDB";      // 메인 버튼, 로고 포인트
+        final String DEEP_NAVY = "#2C3E5D";      // 헤더, 중요 텍스트
+        final String SOFT_WHITE = "#F8F9FB";     // 배경, 카드
+
         return String.format("""
                 <!DOCTYPE html>
                 <html lang="ko">
-                <body style="font-family: Arial, sans-serif; text-align: center; color: #333; background-color: #f9f9f9; padding: 20px;">
-                    <div style="max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #ddd; border-radius: 12px; background-color: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                        <h1 style="color: #0056b3; margin-bottom: 20px;">Dialogym 이메일 인증</h1>
-                        <p style="font-size: 16px; margin-bottom: 25px;">안녕하세요, <strong style="color: #0056b3;">%s</strong>님!</p>
-                        <p style="font-size: 16px; margin-bottom: 30px;">Dialogym 서비스 회원가입을 완료하려면 아래 6자리 인증 코드를 입력해주세요.</p>
-                        <div style="background-color: #f0f8ff; padding: 25px; border-radius: 8px; margin: 30px 0; border: 1px dashed #0056b3;">
-                            <h2 style="font-size: 32px; letter-spacing: 8px; margin: 0; color: #0056b3; font-weight: bold;">%s</h2>
+                <body style="font-family: 'Segoe UI', Arial, sans-serif; text-align: center; color: %s; background-color: %s; padding: 20px; margin: 0;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 40px 30px; border-radius: 12px; background-color: #ffffff; box-shadow: 0 4px 12px rgba(44, 62, 93, 0.1);">
+                        <h1 style="color: %s; margin-bottom: 20px; font-size: 28px; font-weight: 600;">Dialogym 이메일 인증</h1>
+                        <p style="font-size: 16px; margin-bottom: 25px; line-height: 1.6;">안녕하세요, <strong style="color: %s;">%s</strong>님!</p>
+                        <p style="font-size: 16px; margin-bottom: 30px; line-height: 1.6; color: #555;">Dialogym 서비스 회원가입을 완료하려면 아래 6자리 인증 코드를 입력해주세요.</p>
+                        <div style="background-color: %s; padding: 30px; border-radius: 10px; margin: 30px 0; border: 2px solid %s;">
+                            <h2 style="font-size: 36px; letter-spacing: 10px; margin: 0; color: %s; font-weight: bold;">%s</h2>
                         </div>
-                        <p style="font-size: 14px; color: #777;">이 코드는 <strong>15분</strong>간 유효합니다.</p>
-                        <p style="font-size: 12px; color: #aaa; margin-top: 30px;">본인이 요청하지 않으셨다면 이 이메일을 무시해주세요.</p>
-                        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+                        <p style="font-size: 14px; color: #666; margin-top: 25px;">이 코드는 <strong style="color: %s;">15분</strong>간 유효합니다.</p>
+                        <p style="font-size: 13px; color: #999; margin-top: 30px; line-height: 1.5;">본인이 요청하지 않으셨다면 이 이메일을 무시해주세요.</p>
+                        <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 35px 0;">
                         <p style="font-size: 12px; color: #aaa;">© 2025 Dialogym. All rights reserved.</p>
                     </div>
                 </body>
                 </html>
-                """, name, otpCode);
+                """,
+                DEEP_NAVY,      // body text color
+                SOFT_WHITE,     // body background
+                DEEP_NAVY,      // h1 color
+                CALM_BLUE,      // name strong color
+                name,
+                SOFT_WHITE,     // code box background
+                CALM_BLUE,      // code box border
+                CALM_BLUE,      // code color
+                otpCode,
+                CALM_BLUE       // "15분" strong color
+        );
     }
 }
